@@ -1,12 +1,17 @@
 const debug = require('debug')('patch');
+const debugOzcpp = require('debug')('patch:Ozcpp');
 const fs = require('fs');
 const canvas = require('canvas');
 const turf = require('@turf/turf');
 const path = require('path');
 const { matchedData } = require('express-validator');
+const { execFile } = require('child_process');
 const cog = require('../cog_path');
 const gdalProcessing = require('../gdal_processing');
 const db = require('../db/db');
+const gjson = require('../db/geojson');
+
+const ozExe = process.env.OZEXE;
 
 function getCOGs(coordinates, overviews, borderMeters = 0) {
   const BBox = {};
@@ -73,57 +78,59 @@ function createPatch(slab,
   };
 
   // polygone
-  const xOrigin = overviews.crs.boundingBox.xmin;
-  const yOrigin = overviews.crs.boundingBox.ymax;
-  const slabWidth = overviews.tileSize.width * overviews.slabSize.width;
-  const slabHeight = overviews.tileSize.height * overviews.slabSize.height;
+  if (!isAuto) {
+    const xOrigin = overviews.crs.boundingBox.xmin;
+    const yOrigin = overviews.crs.boundingBox.ymax;
+    const slabWidth = overviews.tileSize.width * overviews.slabSize.width;
+    const slabHeight = overviews.tileSize.height * overviews.slabSize.height;
 
-  const resolution = overviews.resolution * 2 ** (overviews.level.max - slab.z);
-  const inputRings = [];
-  for (let n = 0; n < feature.geometry.coordinates.length; n += 1) {
-    const coordinates = feature.geometry.coordinates[n];
-    const ring = [];
-    for (let i = 0; i < coordinates.length; i += 1) {
-      const point = coordinates[i];
-      const x = Math.round((point[0] - xOrigin - slab.x * slabWidth * resolution)
+    const resolution = overviews.resolution * 2 ** (overviews.level.max - slab.z);
+    const inputRings = [];
+    for (let n = 0; n < feature.geometry.coordinates.length; n += 1) {
+      const coordinates = feature.geometry.coordinates[n];
+      const ring = [];
+      for (let i = 0; i < coordinates.length; i += 1) {
+        const point = coordinates[i];
+        const x = Math.round((point[0] - xOrigin - slab.x * slabWidth * resolution)
             / resolution);
-      const y = Math.round((yOrigin - point[1] - slab.y * slabHeight * resolution)
+        const y = Math.round((yOrigin - point[1] - slab.y * slabHeight * resolution)
             / resolution);
-      ring.push([x, y]);
+        ring.push([x, y]);
+      }
+      inputRings.push(ring);
     }
-    inputRings.push(ring);
-  }
 
-  const bbox = [0, 0, slabWidth, slabHeight];
-  const poly = turf.polygon(inputRings);
-  const clipped = turf.bboxClip(poly, bbox);
-  const rings = clipped.geometry.coordinates;
+    const bbox = [0, 0, slabWidth, slabHeight];
+    const poly = turf.polygon(inputRings);
+    const clipped = turf.bboxClip(poly, bbox);
+    const rings = clipped.geometry.coordinates;
 
-  if (rings.length === 0) {
-    debug('masque vide, on passe a la suite : ', slab);
-    return null;
-  }
-
-  // La BBox et le polygone s'intersectent
-  debug('on calcule un masque : ', slab);
-  const mask = canvas.createCanvas(slabWidth, slabHeight);
-  const ctx = mask.getContext('2d');
-  ctx.fillStyle = '#FFFFFF';
-  for (let n = 0; n < rings.length; n += 1) {
-    const ring = rings[n];
-    // console.log(ring);
-    ctx.beginPath();
-    ctx.moveTo(ring[0][0], ring[0][1]);
-    for (let i = 1; i < ring.length; i += 1) {
-      ctx.lineTo(ring[i][0], ring[i][1]);
+    if (rings.length === 0) {
+      debug('masque vide, on passe a la suite : ', slab);
+      return null;
     }
-    ctx.closePath();
-    ctx.fill();
-  }
 
-  mask.data = mask.toBuffer('raw');
-  patchData.mask = mask;
+    // La BBox et le polygone s'intersectent
+    debug('on calcule un masque : ', slab);
+    const mask = canvas.createCanvas(slabWidth, slabHeight);
+    const ctx = mask.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    for (let n = 0; n < rings.length; n += 1) {
+      const ring = rings[n];
+      // console.log(ring);
+      ctx.beginPath();
+      ctx.moveTo(ring[0][0], ring[0][1]);
+      for (let i = 1; i < ring.length; i += 1) {
+        ctx.lineTo(ring[i][0], ring[i][1]);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    mask.data = mask.toBuffer('raw');
+    patchData.mask = mask;
   // end polygone
+  }
 
   const cogPath = cog.getSlabPath(
     slab.x,
@@ -196,6 +203,7 @@ function createPatch(slab,
     promises.push(fs.promises.access(patchData.urlOpiRefIr, fs.constants.F_OK));
     if (isAuto) promises.push(fs.promises.access(patchData.urlOpiSecIr, fs.constants.F_OK));
   }
+
   return Promise.all(promises).then(() => patchData);
 }
 
@@ -222,7 +230,63 @@ async function getPatches(req, _res, next) {
   next();
 }
 
-async function applyPatch(pgClient, overviews, dirCache, idBranch, feature) {
+function ozCppExe(patches, outputDir, geojsonPath) {
+  debug('>>ozCppExe');
+  const arrArgsR = ['-r'];
+  const arrArgsS = ['-s'];
+  const arrArgsG = ['-g'];
+  patches.forEach((patch) => {
+    arrArgsR.push(patch.withRgb ? patch.urlOpiRefRgb : patch.urlOpiRefIr);
+    arrArgsS.push(patch.withRgb ? patch.urlOpiSecRgb : patch.urlOpiSecIr);
+    arrArgsG.push(patch.withOrig ? patch.urlGraphOrig : patch.urlGraph);
+  });
+  const arrArgs = [...arrArgsR, ...arrArgsS, ...arrArgsG, '-p', geojsonPath];
+  const options = {
+    weightDiffCost: 0.95,
+    weightTransition: 10,
+    minCost: 0.0001,
+    tension: 2,
+    border: 20,
+    outDir: outputDir,
+  };
+  arrArgs.push(
+    '-w', `${options.weightDiffCost}`,
+    '-wt', `${options.weightTransition}`,
+    '-m', `${options.minCost}`,
+    '-t', `${options.tension}`,
+    '-b', `${options.border}`,
+    '-o', `${options.outDir}`,
+    '--verbose',
+  );
+  return new Promise((res, rej) => {
+    execFile(ozExe, arrArgs, { env: { PROJ_LIB: process.env.PROJ_LIB } },
+      (err, stdout) => {
+        debugOzcpp(stdout);
+        if (err) {
+          console.log(err);
+          rej(err);
+        } else {
+          res(`${stdout} OK`);
+        }
+      });
+  });
+}
+
+// Maybe move that function to a specifique file.js file
+// duplicate in regress\test-API\3_branch
+function copyFileSync(source, target) {
+  let targetFile = target;
+  // If target is a directory, the copy will have the same name as the source
+  if (fs.existsSync(target)) {
+    if (fs.lstatSync(target).isDirectory()) {
+      targetFile = path.join(target, path.basename(source));
+    }
+  }
+  fs.writeFileSync(targetFile, fs.readFileSync(source));
+}
+
+async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
+  const feature = geojson.features[0];
   debug('applyPatch', feature);
 
   const opiRef = (await db.getOPIFromName(pgClient, idBranch, feature.properties.opiRef.name));
@@ -238,6 +302,8 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, feature) {
     opiRef.id, opiSec.id, patchIsAuto);
   const patchId = patchInserted.id_patch;
   const newPatchNum = patchInserted.num;
+
+  const geojsonPath = await gjson.writeGeojson(idBranch, patchId, dirCache, geojson);
 
   // in case of patch-auto, add border to bbox for selecting cogs
   const borderMeters = patchIsAuto ? 20 : 0;
@@ -269,32 +335,80 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, feature) {
   const promises = [];
   debug('~process patch');
 
-  patches.forEach((patch) => {
-    if (patch === null) {
-      return;
-    }
-    /* eslint-disable no-param-reassign */
-    patch.urlGraphOutput = path.join(dirCache,
-      'graph',
-      patch.cogPath.dirPath,
-      `${idBranch}_${patch.cogPath.filename}_${newPatchNum}.tif`);
-    if (patch.withRgb) {
-      patch.urlOrthoRgbOutput = path.join(dirCache,
-        'ortho', patch.cogPath.dirPath,
+  if (patchIsAuto) {
+    debug('~~Semi-auto patch');
+    const urlOutputData = `${dirCache}/result_ozcpp`;
+    promises.push(ozCppExe(patches, urlOutputData, geojsonPath));
+
+    patches.forEach((patch) => {
+      if (patch === null) {
+        return;
+      }
+      const filename = (patch.withOrig ? '' : `${idBranch}_`) + patch.cogPath.filename;
+      /* eslint-disable no-param-reassign */
+      patch.urlGraphOutput = path.join(urlOutputData,
+        'out_graph',
+        `out_${filename}_georef.tif`);
+
+      if (patch.withRgb) {
+        debug('  >>>> RGB');
+        patch.urlOrthoRgbOutput = path.join(urlOutputData,
+          'out_ortho',
+          `out_${filename}_georef.tif`);
+      }
+      if (patch.withIr && patch.withRgb) {
+        debug('  >>>> RGB + IR');
+        console.log('WARNING: Cache RGB + IR : le nouveau patch ne sera pas appliqué aux images IR');
+        patch.urlOrthoIrOutput = path.join(dirCache,
+          'ortho', patch.cogPath.dirPath,
+          `${idBranch}_${patch.cogPath.filename}_${newPatchNum}i.tif`);
+
+        const urlOrthoIr = patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr;
+        copyFileSync(urlOrthoIr, patch.urlOrthoIrOutput);
+      }
+      if (patch.withIr && !patch.withRgb) {
+        debug('  >>>> IR seul');
+        patch.urlOrthoIrOutput = path.join(urlOutputData,
+          'out_ortho',
+          `out_${filename}_georef.tif`);
+      }
+
+      /* eslint-enable no-param-reassign */
+      slabsModified.push(patch.slab);
+    });
+  } else {
+    debug('~~Polygon patch');
+    patches.forEach((patch) => {
+      if (patch === null) {
+        return;
+      }
+      /* eslint-disable no-param-reassign */
+      patch.urlGraphOutput = path.join(dirCache,
+        'graph',
+        patch.cogPath.dirPath,
         `${idBranch}_${patch.cogPath.filename}_${newPatchNum}.tif`);
-    }
-    if (patch.withIr) {
-      patch.urlOrthoIrOutput = path.join(dirCache,
-        'ortho', patch.cogPath.dirPath,
-        `${idBranch}_${patch.cogPath.filename}_${newPatchNum}i.tif`);
-    }
 
-    /* eslint-enable no-param-reassign */
-    slabsModified.push(patch.slab);
+      if (patch.withRgb) {
+        debug('  >>>> RGB');
+        patch.urlOrthoRgbOutput = path.join(dirCache,
+          'ortho', patch.cogPath.dirPath,
+          `${idBranch}_${patch.cogPath.filename}_${newPatchNum}.tif`);
+      }
+      if (patch.withIr) {
+        debug('  >>>> IR');
+        patch.urlOrthoIrOutput = path.join(dirCache,
+          'ortho', patch.cogPath.dirPath,
+          `${idBranch}_${patch.cogPath.filename}_${newPatchNum}i.tif`);
+      }
 
-    promises.push(gdalProcessing.processPatchAsync(patch, overviews.tileSize.width,
-      patchIsAuto));
-  });
+      /* eslint-enable no-param-reassign */
+      slabsModified.push(patch.slab);
+
+      promises.push(gdalProcessing.processPatchAsync(patch, overviews.tileSize.width,
+        patchIsAuto));
+    });
+  }
+
   debug('', promises.length, 'patchs à appliquer.');
   await Promise.all(promises);
   // Tout c'est bien passé
@@ -328,6 +442,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, feature) {
           rename(patch.urlOrthoRgb, urlOrthoRbgPrev);
         }
       }
+
       if (patch.withIr) {
         const urlOrthoIrPrev = path.join(dirCache, 'ortho', patch.cogPath.dirPath,
           `${idBranch}_${patch.cogPath.filename}_${prevId}i.tif`);
@@ -339,7 +454,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, feature) {
       debug(' historique :', history);
       fs.writeFileSync(`${urlHistory}`, history);
     } else {
-      debug('history n existe pas encore');
+      debug('history n\'existe pas encore');
       const history = `orig;${newPatchNum}`;
       fs.writeFileSync(`${urlHistory}`, history);
       // On a pas besoin de renommer l'image d'origine
@@ -388,7 +503,7 @@ async function postPatch(req, _res, next) {
     overviews,
     req.dir_cache,
     idBranch,
-    geoJson.features[0])
+    geoJson)
     .then((slabsModified) => {
       debug('slabsModified : ', slabsModified);
       req.result = { json: slabsModified, code: 200 };

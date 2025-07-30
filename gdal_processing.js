@@ -267,10 +267,10 @@ function processPatchAsync(patch, blocSize, isAuto) {
       // on verifie que l orientation est bien interprété
       try {
         graph.srs.autoIdentifyEPSG();
-      } catch (error) {
-        console.log('Erreur dans la gestion des SRS');
-        console.log('Il faut probablement supprimer la variable PROJ_LIB de votre environnement');
-        reject(new Error('PROJ_LIB Error'));
+      } catch (err) {
+        const error = new Error(`gdal-async -> srs.autoIdentifyEPSG: ${err.message}`);
+        console.log(error);
+        reject(error);
       }
       const graphMem = gdal.open('graph', 'w', 'MEM', graph.size.x, graph.size.y, 3);
       graphMem.geoTransform = graph.geoTransform;
