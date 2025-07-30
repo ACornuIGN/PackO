@@ -141,7 +141,7 @@ class Editing {
           geometry:
                     {
                       type: saisieTypeStr,
-                      coordinates: this.saisie.type ? [coordinates] : coordinates,
+                      coordinates: this.saisie.type ? [coordinates] : coordinates.slice(0, -1),
                     },
         },
       ],
