@@ -67,6 +67,12 @@ function createPatch(slab,
   idBranch,
   isAuto) {
   debug('~~createPatch : ', slab, feature, colorRef, nameRef, colorSec, nameSec, withRgb, withIr, isAuto);
+
+  const patchData = {
+    slab, colorRef, colorSec, withRgb, withIr,
+  };
+
+  // polygone
   const xOrigin = overviews.crs.boundingBox.xmin;
   const yOrigin = overviews.crs.boundingBox.ymax;
   const slabWidth = overviews.tileSize.width * overviews.slabSize.width;
@@ -116,77 +122,81 @@ function createPatch(slab,
   }
 
   mask.data = mask.toBuffer('raw');
+  patchData.mask = mask;
+  // end polygone
 
-  const P = {
-    slab, mask, colorRef, colorSec, withRgb, withIr,
-  };
-  P.cogPath = cog.getSlabPath(
-    P.slab.x,
-    P.slab.y,
-    P.slab.z,
+  const cogPath = cog.getSlabPath(
+    slab.x,
+    slab.y,
+    slab.z,
     overviews.pathDepth,
   );
+
+  patchData.cogPath = cogPath;
+
   const nameRefRgb = withRgb ? nameRef : nameRef.replace('_ix', 'x');
   const nameRefIr = withRgb ? nameRef.replace('x', '_ix') : nameRef;
-  P.urlGraph = path.join(dirCache, 'graph', P.cogPath.dirPath,
-    `${idBranch}_${P.cogPath.filename}.tif`);
-  P.urlOrthoRgb = path.join(dirCache, 'ortho', P.cogPath.dirPath,
-    `${idBranch}_${P.cogPath.filename}.tif`);
-  P.urlOrthoIr = path.join(dirCache, 'ortho', P.cogPath.dirPath,
-    `${idBranch}_${P.cogPath.filename}i.tif`);
-  P.urlOpiRefRgb = path.join(dirCache, 'opi', P.cogPath.dirPath,
-    `${P.cogPath.filename}_${nameRefRgb}.tif`);
-  P.urlOpiRefIr = path.join(dirCache, 'opi', P.cogPath.dirPath,
-    `${P.cogPath.filename}_${nameRefIr}.tif`);
+  patchData.urlGraph = path.join(dirCache, 'graph', cogPath.dirPath,
+    `${idBranch}_${cogPath.filename}.tif`);
+  patchData.urlOrthoRgb = path.join(dirCache, 'ortho', cogPath.dirPath,
+    `${idBranch}_${cogPath.filename}.tif`);
+  patchData.urlOrthoIr = path.join(dirCache, 'ortho', cogPath.dirPath,
+    `${idBranch}_${cogPath.filename}i.tif`);
+  patchData.urlOpiRefRgb = path.join(dirCache, 'opi', cogPath.dirPath,
+    `${cogPath.filename}_${nameRefRgb}.tif`);
+  patchData.urlOpiRefIr = path.join(dirCache, 'opi', cogPath.dirPath,
+    `${cogPath.filename}_${nameRefIr}.tif`);
   if (isAuto) {
     const nameSecRgb = withRgb ? nameSec : nameSec.replace('_ix', 'x');
     const nameSecIr = withRgb ? nameSec.replace('x', '_ix') : nameSec;
-    P.urlOpiSecRgb = path.join(dirCache, 'opi', P.cogPath.dirPath,
-      `${P.cogPath.filename}_${nameSecRgb}.tif`);
-    P.urlOpiSecIr = path.join(dirCache, 'opi', P.cogPath.dirPath,
-      `${P.cogPath.filename}_${nameSecIr}.tif`);
+    patchData.urlOpiSecRgb = path.join(dirCache, 'opi', cogPath.dirPath,
+      `${cogPath.filename}_${nameSecRgb}.tif`);
+    patchData.urlOpiSecIr = path.join(dirCache, 'opi', cogPath.dirPath,
+      `${cogPath.filename}_${nameSecIr}.tif`);
   }
-  P.urlGraphOrig = path.join(dirCache, 'graph', P.cogPath.dirPath,
-    `${P.cogPath.filename}.tif`);
-  P.urlOrthoRgbOrig = path.join(dirCache, 'ortho', P.cogPath.dirPath,
-    `${P.cogPath.filename}.tif`);
-  P.urlOrthoIrOrig = path.join(dirCache, 'ortho', P.cogPath.dirPath,
-    `${P.cogPath.filename}i.tif`);
-  P.withOrig = false;
+  patchData.urlGraphOrig = path.join(dirCache, 'graph', cogPath.dirPath,
+    `${cogPath.filename}.tif`);
+  patchData.urlOrthoRgbOrig = path.join(dirCache, 'ortho', cogPath.dirPath,
+    `${cogPath.filename}.tif`);
+  patchData.urlOrthoIrOrig = path.join(dirCache, 'ortho', cogPath.dirPath,
+    `${cogPath.filename}i.tif`);
+  patchData.withOrig = false;
+
+  // Give acces to file. A REFACTO
   const promises = [];
-  promises.push(fs.promises.access(P.urlGraph, fs.constants.F_OK).catch(
+  promises.push(fs.promises.access(patchData.urlGraph, fs.constants.F_OK).catch(
     () => {
-      fs.promises.access(P.urlGraphOrig, fs.constants.F_OK)
+      fs.promises.access(patchData.urlGraphOrig, fs.constants.F_OK)
       // cas ou le patch sort du cache --> géré avec Opi
         .catch(() => {});
-      P.withOrig = true;
+      patchData.withOrig = true;
     },
   ));
-  if (P.withRgb) {
-    promises.push(fs.promises.access(P.urlOrthoRgb, fs.constants.F_OK).catch(
+  if (patchData.withRgb) {
+    promises.push(fs.promises.access(patchData.urlOrthoRgb, fs.constants.F_OK).catch(
       () => {
-        fs.promises.access(P.urlOrthoRgbOrig, fs.constants.F_OK)
+        fs.promises.access(patchData.urlOrthoRgbOrig, fs.constants.F_OK)
         // cas ou le patch sort du cache --> géré avec Opi
           .catch(() => {});
-        P.withOrig = true;
+        patchData.withOrig = true;
       },
     ));
-    promises.push(fs.promises.access(P.urlOpiRefRgb, fs.constants.F_OK));
-    if (isAuto) promises.push(fs.promises.access(P.urlOpiSecRgb, fs.constants.F_OK));
+    promises.push(fs.promises.access(patchData.urlOpiRefRgb, fs.constants.F_OK));
+    if (isAuto) promises.push(fs.promises.access(patchData.urlOpiSecRgb, fs.constants.F_OK));
   }
-  if (P.withIr) {
-    promises.push(fs.promises.access(P.urlOrthoIr, fs.constants.F_OK).catch(
+  if (patchData.withIr) {
+    promises.push(fs.promises.access(patchData.urlOrthoIr, fs.constants.F_OK).catch(
       () => {
-        fs.promises.access(P.urlOrthoIrOrig, fs.constants.F_OK)
+        fs.promises.access(patchData.urlOrthoIrOrig, fs.constants.F_OK)
         // cas ou le patch sort du cache --> géré avec Opi
           .catch(() => {});
-        P.withOrig = true;
+        patchData.withOrig = true;
       },
     ));
-    promises.push(fs.promises.access(P.urlOpiRefIr, fs.constants.F_OK));
-    if (isAuto) promises.push(fs.promises.access(P.urlOpiSecIr, fs.constants.F_OK));
+    promises.push(fs.promises.access(patchData.urlOpiRefIr, fs.constants.F_OK));
+    if (isAuto) promises.push(fs.promises.access(patchData.urlOpiSecIr, fs.constants.F_OK));
   }
-  return Promise.all(promises).then(() => P);
+  return Promise.all(promises).then(() => patchData);
 }
 
 async function getPatches(req, _res, next) {
