@@ -157,7 +157,6 @@ class Menu extends dat.GUI {
         newLayer.visible = value;
         this.view.notifyChange(newLayer);
       }));
-    // TODO manage check when we select an OPI
 
     // opacity
     folder.add({ opacity: layer.opacity }, 'opacity').min(0.001).max(1.0)

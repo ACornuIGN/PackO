@@ -343,11 +343,18 @@ async function main() {
 
     view.addEventListener('opi-selected', (newOpi) => {
       console.log(`-> Opi '${newOpi.name}' selected.`);
+      const cboxVisi = document.getElementById('Opi').children[0];
       if (newOpi.name === 'none') {
         view.getLayerById('Opi').visible = false;
         view.notifyChange(view.getLayerById('Opi'), true);
+        if (cboxVisi.checked) {
+          cboxVisi.click();
+        }
       } else {
         viewer.refresh('Opi');
+        if (!cboxVisi.checked) {
+          cboxVisi.click();
+        }
       }
       menu[`setOpi${newOpi.id}DataCtr`](newOpi.name);
     });
