@@ -260,16 +260,22 @@ function wmts(req, _res, next) {
       }
       gdalProcessing.getTileEncoded(url,
         cogPath.x, cogPath.y, cogPath.z,
-        formatGDAL, overviews.tileSize.width, bands).then((img) => {
-        req.result = { img, code: 200 };
-        next();
-      });
+        formatGDAL, overviews.tileSize.width, bands)
+        .then((img) => {
+          req.result = { img, code: 200 };
+          next();
+        })
+        .catch((err) => {
+          // error not handled
+          console.warn('ERROR in gdalProcessing.getTileEncoded()', err);
+        });
     } catch (error) {
       debug(error);
-      gdalProcessing.getDefaultEncoded(formatGDAL, overviews.tileSize.width).then((img) => {
-        req.result = { img, code: 200 };
-        next();
-      });
+      gdalProcessing.getDefaultEncoded(formatGDAL, overviews.tileSize.width)
+        .then((img) => {
+          req.result = { img, code: 200 };
+          next();
+        });
     }
     // GetFeatureInfo
   } else if (REQUEST === 'GetFeatureInfo') {
