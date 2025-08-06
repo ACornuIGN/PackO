@@ -153,6 +153,45 @@ async function getDefaultEncoded(formatGDAL, blocSize) {
   return gdal.vsimem.release(name);
 }
 
+async function getBands(ds) {
+  const size = await ds.rasterSizeAsync;
+  return Promise.all([
+    ds.bands.getAsync(1).then(
+      (band) => band.pixels.readAsync(0, 0, size.x, size.y),
+    ),
+    ds.bands.getAsync(2).then(
+      (band) => band.pixels.readAsync(0, 0, size.x, size.y),
+    ),
+    ds.bands.getAsync(3).then(
+      (band) => band.pixels.readAsync(0, 0, size.x, size.y),
+    ),
+    ds.geoTransformAsync,
+    ds.srsAsync,
+  ]).then((res2) => ({
+    bands: [res2[0], res2[1], res2[2]],
+    geoTransform: res2[3],
+    srs: res2[4],
+    size,
+    ds,
+  }));
+}
+async function getBand(ds) {
+  const size = await ds.rasterSizeAsync;
+  return Promise.all([
+    ds.bands.getAsync(1).then(
+      (band) => band.pixels.readAsync(0, 0, size.x, size.y),
+    ),
+    ds.geoTransformAsync,
+    ds.srsAsync,
+  ]).then((res2) => ({
+    bands: [res2[0]],
+    geoTransform: res2[1],
+    srs: res2[2],
+    size,
+    ds,
+  }));
+}
+
 function processPatchAsync(patch, blocSize, isAuto) {
   return new Promise((res, reject) => {
     // On patch le graph
@@ -182,44 +221,6 @@ function processPatchAsync(patch, blocSize, isAuto) {
       }
     }
 
-    async function getBands(ds) {
-      const size = await ds.rasterSizeAsync;
-      return Promise.all([
-        ds.bands.getAsync(1).then(
-          (band) => band.pixels.readAsync(0, 0, size.x, size.y),
-        ),
-        ds.bands.getAsync(2).then(
-          (band) => band.pixels.readAsync(0, 0, size.x, size.y),
-        ),
-        ds.bands.getAsync(3).then(
-          (band) => band.pixels.readAsync(0, 0, size.x, size.y),
-        ),
-        ds.geoTransformAsync,
-        ds.srsAsync,
-      ]).then((res2) => ({
-        bands: [res2[0], res2[1], res2[2]],
-        geoTransform: res2[3],
-        srs: res2[4],
-        size,
-        ds,
-      }));
-    }
-    async function getBand(ds) {
-      const size = await ds.rasterSizeAsync;
-      return Promise.all([
-        ds.bands.getAsync(1).then(
-          (band) => band.pixels.readAsync(0, 0, size.x, size.y),
-        ),
-        ds.geoTransformAsync,
-        ds.srsAsync,
-      ]).then((res2) => ({
-        bands: [res2[0]],
-        geoTransform: res2[1],
-        srs: res2[2],
-        size,
-        ds,
-      }));
-    }
     debug('chargement...');
     Promise.all([
       gdal.openAsync(urlGraph).then((ds) => getBands(ds)),
