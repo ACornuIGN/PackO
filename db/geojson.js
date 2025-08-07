@@ -1,37 +1,43 @@
 const debug = require('debug')('gjson');
 const fs = require('fs');
 
-async function writeGeojson(path, idBranch, idPatch, crsCode, geom,
-  opiRefName, opiSecName, opiRefColor, opiSecColor, isAuto) {
-  debug(' ~~ write geojson file');
-  const data = {
-    type: 'FeatureCollection',
-    name: `${idBranch}_${idPatch}`,
-    crs: {
-      type: 'name',
-      properties: { name: `urn:ogc:def:crs:EPSG::${crsCode}` },
-    },
-    features: [
-      {
-        type: 'Feature',
-        properties: {
-          opiName: opiRefName,
-          color: opiRefColor,
-          opiNameSec: opiSecName,
-          colorSec: opiSecColor,
-          auto: isAuto,
-        },
-        geometry: geom,
-      },
-    ],
+async function writeGeojson(idBranch, idPatch, cachePath, geojson) {
+  debug(' ~~writeGeojson');
+  // create dir if it does not exist
+  const dir = `${cachePath}/tmp_test_js`;
+  try {
+    return fs.mkdirSync(dir);
+  } catch (error) {
+    if (error.code !== 'EEXIST') debug(error);
+  }
+
+  // write patch geojson
+  const filePath = `${dir}/patch_idBr${idBranch}_idP${idPatch}.geojson`;
+
+  const geojsonAna = JSON.parse(JSON.stringify(geojson));
+
+  geojsonAna.name = `${idBranch}_${idPatch}`;
+
+  const prop = geojson.features[0].properties;
+  if (prop.opiSec.name) {
+    geojsonAna.features[0].geometry.type = 'MultiLineString';
+  }
+  geojsonAna.features[0].geometry.coordinates = [geojsonAna.features[0].geometry.coordinates];
+
+  geojsonAna.features[0].properties = {
+    opiName: prop.opiRef.name,
+    color: prop.opiRef.color,
+    opiName2: prop.opiSec.name,
+    colorSec: prop.opiSec.color,
   };
 
   try {
-    fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
-    debug(`  File '${path}' written`);
+    fs.writeFileSync(filePath, JSON.stringify(geojsonAna, null, 2), 'utf8');
+    debug(`  File '${filePath}' written`);
   } catch (error) {
     debug(error);
   }
+  return filePath;
 }
 
 module.exports = {
