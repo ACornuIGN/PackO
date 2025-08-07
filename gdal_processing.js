@@ -6,6 +6,12 @@ const uuid = require('uuid');
 
 const defaultImage = {};
 
+if (process.env.PROJ_LIB !== undefined) {
+  // const projPath = path.resolve(__dirname, './node_modules/gdal-async/deps/libproj/proj/data');
+  const projPath = path.resolve(require.resolve('gdal-async'), '../../deps/libproj/proj/data');
+  gdal.setPROJSearchPath(projPath);
+}
+
 /**
  *
  * @param {string} url - url de l'image
