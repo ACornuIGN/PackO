@@ -235,12 +235,18 @@ function ozCppExe(patches, outputDir, geojsonPath) {
   const arrArgsR = ['-r'];
   const arrArgsS = ['-s'];
   const arrArgsG = ['-g'];
+  const arrArgsO = ['-or'];
   patches.forEach((patch) => {
     arrArgsR.push(patch.withRgb ? patch.urlOpiRefRgb : patch.urlOpiRefIr);
     arrArgsS.push(patch.withRgb ? patch.urlOpiSecRgb : patch.urlOpiSecIr);
     arrArgsG.push(patch.withOrig ? patch.urlGraphOrig : patch.urlGraph);
+    if (patch.withRgb) {
+      arrArgsO.push(patch.withOrig ? patch.urlOrthoRgbOrig : patch.urlOrthoRgb);
+    } else {
+      arrArgsO.push(patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr);
+    }
   });
-  const arrArgs = [...arrArgsR, ...arrArgsS, ...arrArgsG, '-p', geojsonPath];
+  const arrArgs = [...arrArgsR, ...arrArgsS, ...arrArgsG, ...arrArgsO, '-p', geojsonPath];
   const options = {
     weightDiffCost: 0.95,
     weightTransition: 10,
