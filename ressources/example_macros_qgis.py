@@ -52,6 +52,7 @@ color=None
 opi_layer = None
 ortho_layer = None
 patch_layer = None
+patch_layer_auto = None
 retinfo_layer = None
 retinfosauv_layer = None
 avancement_layer = None
@@ -65,6 +66,8 @@ for layer in QgsProject.instance().mapLayers().values():
         ortho_layer = layer
     if (name == 'RETOUCHES_GRAPHE'):
         patch_layer = layer
+    if (name == 'RETOUCHES_GRAPHE_AUTO'):
+        patch_layer_auto = layer
     if (name == 'RETOUCHES_INFO'):
         retinfo_layer = layer
     if (name == 'RETOUCHES_INFO_SAUV'):
@@ -142,6 +145,7 @@ def on_key(event):
             return
         patch_layer.startEditing()
         feature = list(patch_layer.getFeatures())[0]
+        ## TODO: handle patch auto
         mess = sendPatch(feature, OPI, color)
         print(mess)
         patch_layer.deleteFeature(feature.id())
@@ -153,6 +157,35 @@ def on_key(event):
         # pour ne pas a avoir a remettre en mode edition pour la prochiane saisie
         patch_layer.startEditing()
         return
+
+    if (touche == Qt.Key_A):
+        nb_features = patch_layer_auto.featureCount()
+        if nb_features == 0:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("PAS DE RETOUCHE")
+            msg.setWindowTitle("ERREUR")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+            OPI = None
+            return
+        if nb_features > 1:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("UNE SEULE RETOUCHE A LA FOIS")
+            msg.setWindowTitle("ERREUR")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+            OPI = None
+            return
+        patch_layer_auto.startEditing()
+        feature = list(patch_layer_auto.getFeatures())[0]
+        mPL=feature.geometry().asMultiPolyline()
+        firstLine=mPL[0]
+        sOPI1=selectOPI(firstLine[0].x(),firstLine[0].y())
+        sOPI2=selectOPI(firstLine[1].x(),firstLine[1].y())
+        print(sOPI1, sOPI2)
+        # TODO: handle patch auto
 
     if (touche == Qt.Key_P):
         # Pick OPI
