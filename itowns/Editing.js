@@ -105,7 +105,7 @@ class Editing {
       console.log('pas de polygone');
       return;
     }
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
 
     const saisieTypeStr = Object.keys(saisie)[this.saisie.type];
@@ -153,11 +153,11 @@ class Editing {
     this.api.postPatch(this.branch.active.id, JSON.stringify(geojson))
       .then(() => {
         this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
-        this.viewer.message = '';
+        this.viewer.setMessage();
       })
       .catch((error) => {
         console.log(error);
-        this.viewer.message = 'Erreur post patch';
+        this.viewer.setMessage('Erreur post patch', true);
         this.viewer.view.dispatchEvent({
           type: 'error',
           error,
@@ -190,7 +190,7 @@ class Editing {
       this.viewer.refresh([this.branch.alert.layerName]);
       this.alertFC.features[0].geometries[this.featureIndex].properties[variable] = value;
     } else {
-      this.viewer.message = 'PB with validate';
+      this.viewer.setMessage('PB with validate', true);
     }
   }
 
@@ -310,7 +310,7 @@ class Editing {
       if (this.currentStatus === status.ADDREMARK) {
         this.menu.getController('addRemark').setBackgroundColorTo('');
       }
-      this.viewer.message = '';
+      this.viewer.setMessage();
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
     }
@@ -318,14 +318,14 @@ class Editing {
       if (e.key === 'Shift') {
         if (this.currentPolygon) {
           if (this.branch.active.name === 'orig') {
-            this.viewer.message = 'Changer de branche pour continuer';
+            this.viewer.setMessage('Changer de branche pour continuer', true);
           } else if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-            this.viewer.message = 'Zoom non valide pour continuer';
+            this.viewer.setMessage('Zoom non valide pour continuer', true);
           } else if (this.nbVertices < 3) {
-            this.viewer.message = 'Pas assez de points';
+            this.viewer.setMessage('Pas assez de points');
           } else {
             this.currentStatus = status.ENDING;
-            this.viewer.message = 'Cliquer pour valider la saisie';
+            this.viewer.setMessage('Cliquer pour valider la saisie');
             this.view.controls.setCursor('default', 'progress');
 
             const vertices = this.currentPolygon.geometry.attributes.position;
@@ -358,7 +358,7 @@ class Editing {
     console.log(e.key, ' up');
     if (e.key === 'Shift') {
       if (this.currentStatus === status.ENDING || this.currentStatus === status.SAISIE) {
-        this.viewer.message = 'Maj pour terminer';
+        this.viewer.setMessage('Maj pour terminer');
         if (this.currentPolygon && (this.nbVertices > 0)) {
           // on remet le dernier sommet sur la position de la souris
 
@@ -379,10 +379,10 @@ class Editing {
   }
 
   click(e) {
+    this.viewer.setMessage();
     if (this.currentStatus === status.WAITING) return;
     const mousePosition = this.pickPoint(e);
     console.log('Click: ', mousePosition.x, mousePosition.y);
-    this.viewer.message = '';
 
     switch (this.currentStatus) {
       case status.RAS: {
@@ -390,19 +390,19 @@ class Editing {
         break;
       }
       case status.SELECT: {
-        this.viewer.message = 'calcul en cours';
+        this.viewer.setMessage('calcul en cours');
         this.view.controls.setCursor('default', 'wait');
         this.currentStatus = status.WAITING;
         // on selectionne une Opi
         this.api.getGraph(this.branch.active.id, mousePosition)
           .then((opi) => {
             if (this.opi1Name !== 'none' && ([this.opi1Name, this.opi2Name].includes(opi.opiName))) {
-              this.viewer.message = 'Même opi';
+              this.viewer.setMessage('Même opi !!!', true);
               this.view.controls.setCursor('default', 'crosshair');
               this.currentStatus = status.SELECT;
               return;
             }
-            this.viewer.message = '';
+            this.viewer.setMessage();
             this.view.controls.setCursor('default', 'auto');
             this.currentStatus = status.RAS;
             this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
@@ -425,11 +425,11 @@ class Editing {
           })
           .catch((error) => {
             if (error.name === 'Erreur Utilisateur') {
-              this.viewer.message = 'en dehors de la zone';
+              this.viewer.setMessage('en dehors de la zone', true);
               this.view.controls.setCursor('default', 'crosshair');
               this.currentStatus = status.SELECT;
             } else {
-              this.viewer.message = `Opi ${this.currentOpi}: PB de BdD`;
+              this.viewer.setMessage(`Opi ${this.currentOpi}: PB de BdD`, true);
               this.view.controls.setCursor('default', 'auto');
               this.currentStatus = status.RAS;
               this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
@@ -443,12 +443,12 @@ class Editing {
       }
       case status.SAISIE: {
         if (this.branch.active.name === 'orig') {
-          this.viewer.message = 'Changer de branche pour continuer';
+          this.viewer.setMessage('Changer de branche pour continuer', true);
         } else if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-          this.viewer.message = 'Zoom non valide pour continuer';
+          this.viewer.setMessage('Zoom non valide pour continuer', true);
         } else {
           // Cas ou l'on est en train de saisir un polygon : on ajoute un point
-          this.viewer.message = 'Maj pour terminer';
+          this.viewer.setMessage('Maj pour terminer');
 
           // Si c'est le premier point, on defini une position de reference (pb de précision)
           if (this.nbVertices === 0) {
@@ -485,11 +485,11 @@ class Editing {
 
   select(id) {
     if (this.currentStatus === status.SELECT && this.currentOpi !== id) {
-      this.viewer.message = `Opi ${this.currentOpi} non encore choisie`;
+      this.viewer.setMessage(`Opi ${this.currentOpi} non encore choisie`, true);
     }
     if (this.currentStatus !== status.RAS) return;
     console.log('"select": En attente de sélection');
-    this.viewer.message = `choisir l'Opi ${id}`;
+    this.viewer.setMessage(`choisir l'Opi ${id}`);
     this.view.controls.setCursor('default', 'crosshair');
     this.currentStatus = status.SELECT;
     this.currentOpi = id;
@@ -499,27 +499,27 @@ class Editing {
   saisie(type) {
     if (this.currentStatus === status.WAITING) return;
     if (this.currentStatus === status.SELECT) {
-      this.viewer.message = `Sélection Opi ${this.currentOpi} en cours`;
+      this.viewer.setMessage(`Sélection Opi ${this.currentOpi} en cours`);
       return;
     }
     if (this.currentPolygon) {
-      this.viewer.message = 'saisie déjà en cours';
+      this.viewer.setMessage('saisie déjà en cours', true);
       // saisie deja en cours
       return;
     }
 
     if (saisie[type] === saisie.Polygon) {
       if (this.opi1Name === 'none') {
-        this.viewer.message = 'pas d\'Opi sélectionnée';
+        this.viewer.setMessage('pas d\'Opi sélectionnée', true);
         return;
       }
       if (this.opi2Name !== 'none') {
-        this.viewer.message = '2 Opi sélectionnées !';
+        this.viewer.setMessage('2 Opi sélectionnées !');
         return;
       }
     } else if (saisie[type] === saisie.LineString) {
       if (this.opi1Name === 'none' || this.opi2Name === 'none') {
-        this.viewer.message = 'Sélectionnez 2 Opi';
+        this.viewer.setMessage('Sélectionnez 2 Opi', true);
         return;
       }
     }
@@ -527,7 +527,7 @@ class Editing {
     this.saisie.type = saisie[type];
     this.saisie.color = saisieColor[type];
     console.log(`Saisie d'un.e ${type}`);
-    this.viewer.message = `Saisie d'un.e ${type}`;
+    this.viewer.setMessage(`Saisie d'un.e ${type}`);
     this.view.controls.setCursor('default', 'crosshair');
     this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
     this.menu.getController(type).setBackgroundColorTo(this.saisie.color);
@@ -555,12 +555,12 @@ class Editing {
   undo() {
     if (this.currentStatus !== status.RAS) return;
     if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-      this.viewer.message = 'Zoom non valide pour annuler';
+      this.viewer.setMessage('Zoom non valide pour annuler', true);
       return;
     }
     // this.cancelcurrentPolygon();
     console.log('undo');
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -569,14 +569,14 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.message = '';
+      this.viewer.setMessage();
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
       }
       res.text().then((msg) => {
-        this.viewer.message = msg;
+        this.viewer.setMessage(msg);
       });
     });
   }
@@ -584,11 +584,11 @@ class Editing {
   redo() {
     if (this.currentStatus !== status.RAS) return;
     if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-      this.viewer.message = 'Zoom non valide pour refaire';
+      this.viewer.setMessage('Zoom non valide pour refaire', true);
       return;
     }
     console.log('redo');
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
     fetch(`${this.api.url}/${this.branch.active.id}/patch/redo?`,
@@ -596,14 +596,14 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.message = '';
+      this.viewer.setMessage();
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.viewer.refresh(this.branch.layers);
       }
       res.text().then((msg) => {
-        this.viewer.message = msg;
+        this.viewer.setMessage(msg);
       });
     });
   }
@@ -613,7 +613,7 @@ class Editing {
     const ok = window.confirm('Voulez-vous effacer toutes les modifications?');
     if (!ok) return;
     console.log('clear');
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -622,14 +622,14 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.message = '';
+      this.viewer.setMessage();
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
       }
       res.text().then((msg) => {
-        this.viewer.message = msg;
+        this.viewer.setMessage(msg);
       });
     });
   }
@@ -638,14 +638,14 @@ class Editing {
   addRemark() {
     if (this.currentStatus !== status.RAS) return;
     console.log("saisie d'une remarque");
-    this.viewer.message = "saisie d'une remarque";
+    this.viewer.setMessage("saisie d'une remarque");
     this.view.controls.setCursor('default', 'crosshair');
     this.currentStatus = status.ADDREMARK;
     this.menu.getController('addRemark').setBackgroundColorTo(actvBtnColor);
   }
 
   postRemark(mousePosition, remark) {
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -653,7 +653,7 @@ class Editing {
     const remarksLayerId = this.view.getLayerById('Remarques').vectorId;
     this.api.putRemark(remarksLayerId, mousePosition, remark)
       .then(() => {
-        this.viewer.message = '';
+        this.viewer.setMessage();
         this.view.controls.setCursor('default', 'auto');
         this.currentStatus = status.RAS;
         this.menu.getController('addRemark').setBackgroundColorTo('');
@@ -665,7 +665,7 @@ class Editing {
         });
       })
       .catch((error) => {
-        this.viewer.message = 'remark: error during save';
+        this.viewer.setMessage('remark: error during save', true);
         this.viewer.view.dispatchEvent({
           type: 'error',
           msg: error,
@@ -676,7 +676,7 @@ class Editing {
   delRemark() {
     if (this.currentStatus !== status.RAS) return;
     console.log("suppression d'une remarque");
-    this.viewer.message = 'calcul en cours';
+    this.viewer.setMessage('calcul en cours');
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -688,7 +688,7 @@ class Editing {
     const remarkId = featureSelectedGeom.properties.id;
     this.api.delRemark(remarksLayerId, remarkId)
       .then(() => {
-        this.viewer.message = '';
+        this.viewer.setMessage();
         this.view.controls.setCursor('default', 'auto');
         this.currentStatus = status.RAS;
 
@@ -697,7 +697,7 @@ class Editing {
         });
       })
       .catch((error) => {
-        this.viewer.message = 'remark: error during delete';
+        this.viewer.setMessage('remark: error during delete', true);
         this.viewer.view.dispatchEvent({
           type: 'error',
           msg: error,

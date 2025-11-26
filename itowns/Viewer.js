@@ -122,6 +122,19 @@ function changeLayerStyle(config, idSelected, oldStyle) {
   };
 }
 
+function setMessageDiv(message, alert) {
+  const divMessage = document.getElementById('messageDiv');
+  divMessage.textContent = message;
+  divMessage.style.visibility = 'visible';
+  divMessage.style.color = 'black';
+  if (alert) {
+    divMessage.style.color = '#9C2C17';
+  }
+  if (message === '' || !(message)) {
+    divMessage.style.visibility = 'hidden';
+  }
+}
+
 class Viewer {
   constructor(viewerDiv) {
     this.viewerDiv = viewerDiv;
@@ -419,6 +432,10 @@ class Viewer {
     });
   }
 
+  setMessage(message, alert) {
+    setMessageDiv(message, alert)
+  }
+
   addDnDFiles(eventDnD, files) {
     eventDnD.preventDefault();
 
@@ -630,4 +647,5 @@ class Viewer {
     }
   }
 }
+
 export default Viewer;

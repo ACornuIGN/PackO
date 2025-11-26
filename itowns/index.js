@@ -206,9 +206,9 @@ async function main() {
       .name('Coordinates')
       .listen().onChange(() => {
         if (!checkCoordString(editing.coord)) {
-          viewer.message = 'Coordonnees non valides';
+          viewer.setMessage('Cordonnees non valides', true);
         } else {
-          viewer.message = '';
+          viewer.setMessage();
         }
       })
       .onFinishChange(() => {
@@ -217,7 +217,7 @@ async function main() {
           viewer.centerCameraOn(coords[0], coords[1]);
         }
         editing.currentStatus = editing.STATUS.RAS;
-        viewer.message = '';
+        viewer.setMessage();
       })
       .domElement.addEventListener('click', () => {
         editing.currentStatus = editing.STATUS.WRITING;
@@ -236,10 +236,7 @@ async function main() {
       .domElement.parentElement.parentElement.style.display = 'none';
 
     // Message
-    viewer.message = '';
-    menu.add(viewer, 'message')
-      .name('Message').listen()
-      .domElement.parentElement.style.pointerEvents = 'none';
+    viewer.setMessage();
 
     // Couche d'alertes
     menu.add({ alertLayer: '-' }, 'alertLayer', [alert.layerName, ...branch.vectorList.map((elem) => elem.name)])
@@ -258,7 +255,7 @@ async function main() {
         if (newId >= 0 && newId < alert.nbTotal) {
           alert.changeFeature(newId, { centerOnFeature: true });
         } else {
-          viewer.message = 'id non valide';
+          viewer.setMessage('id non valide', true);
           alert.id = alert.featureIndex;
         }
       })

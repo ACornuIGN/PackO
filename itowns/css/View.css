@@ -83,6 +83,28 @@ body {
     z-index: 2 !important;
 }
 
+#messageDiv {
+    position: absolute;
+    left: 310px;
+    top: 0px;
+    z-index:  2 !important;
+    max-width: 300px;
+    max-height: 300px;
+    background-color: #ffffff4b;
+    border-radius: 5px;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 1.6rem;
+    color: black;
+    text-shadow: 1px 1px 0 yellow,
+                -1px 1px 0 yellow,
+                -1px -1px 0 yellow,
+                1px -1px 0 yellow;
+    visibility: hidden;
+    overflow-x: auto;
+}
+
 #miniDiv {
     display: block;
     position: absolute;

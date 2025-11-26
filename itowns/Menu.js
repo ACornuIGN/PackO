@@ -194,7 +194,7 @@ class Menu extends dat.GUI {
             this.view.removeVectorLayer(layer.id);
             this.removeLayerGUI(layer.id);
           } else {
-            this.viewer.message = 'Couche en edition';
+            this.viewer.setMessage('Couche en edition');
           }
         });
     }
