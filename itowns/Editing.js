@@ -160,11 +160,7 @@ class Editing {
       })
       .catch((error) => {
         console.log(error);
-        if (error === undefined) {
-          this.viewer.message = "'undefined' error";
-        } else {
-          this.viewer.message = error.message;
-        }
+        this.viewer.message = 'Erreur post patch';
         this.viewer.view.dispatchEvent({
           type: 'error',
           error,
