@@ -12,6 +12,7 @@ const db = require('../db/db');
 const gjson = require('../db/geojson');
 
 const ozExe = process.env.OZEXE;
+let dirTmp = '';
 
 function getCOGs(coordinates, overviews, borderMeters = 0) {
   const BBox = {};
@@ -344,6 +345,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   if (patchIsAuto) {
     debug('~~Semi-auto patch');
     const urlOutputData = `${dirCache}/result_ozcpp_idBr${idBranch}`;
+    dirTmp = urlOutputData;
     promises.push(ozCppExe(patches, urlOutputData, geojsonPath));
 
     patches.forEach((patch) => {
@@ -524,6 +526,17 @@ async function postPatch(req, _res, next) {
     })
     .finally(() => {
       debug('Fin de POST patch');
+      if (fs.existsSync(dirTmp)) {
+        if (fs.lstatSync(dirTmp).isDirectory()) {
+          try {
+            fs.rmdirSync(dirTmp, { recursive: true, force: true });
+            debug(`Suppression '${dirTmp}' OK`);
+          } catch (err) {
+            debug(err);
+            return;
+          }
+        }
+      }
       next();
     });
 }
