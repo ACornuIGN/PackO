@@ -343,7 +343,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
 
   if (patchIsAuto) {
     debug('~~Semi-auto patch');
-    const urlOutputData = `${dirCache}/result_ozcpp`;
+    const urlOutputData = `${dirCache}/result_ozcpp_idBr${idBranch}`;
     promises.push(ozCppExe(patches, urlOutputData, geojsonPath));
 
     patches.forEach((patch) => {
