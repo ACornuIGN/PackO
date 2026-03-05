@@ -300,11 +300,9 @@ describe('route/branch.js', () => {
                   {
                     type: 'Feature',
                     properties: {
-                      colorRef: overviews.list_OPI[testOpi].color,
-                      opiRefName: testOpi,
-                      colorSec: 'none',
-                      opiSecName: 'none',
-                      patchIsAuto: false,
+                      color: overviews.list_OPI[testOpi].color,
+                      opiName: testOpi,
+                      is_auto: false,
                     },
                     geometry: { type: 'Polygon', coordinates: [[[230749, 6759646], [230752, 6759646], [230752, 6759644], [230749, 6759644], [230749, 6759646]]] },
                   }],

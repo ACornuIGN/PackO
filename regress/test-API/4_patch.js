@@ -99,6 +99,7 @@ describe('route/patch.js', () => {
                 properties: {
                   color: overviews.list_OPI[testOpi].color,
                   opiName: testOpi,
+                  is_auto: false,
                 },
                 geometry: { type: 'Polygon', coordinates: [[[230749, 6759646], [230752, 6759646], [230752, 6759644], [230749, 6759644], [230749, 6759646]]] },
               }],
@@ -123,6 +124,7 @@ describe('route/patch.js', () => {
                 properties: {
                   color: overviews.list_OPI[testOpi].color,
                   opiName: testOpi,
+                  is_auto: false,
                 },
                 geometry: { type: 'Polygon', coordinates: [[[230748, 6759736], [230746, 6759736], [230746, 6759734], [230748, 6759734], [230748, 6759736]]] },
               }],
@@ -220,6 +222,7 @@ describe('route/patch.js', () => {
               properties: {
                 color: overviews.list_OPI[testOpi].color,
                 opiName: testOpi,
+                is_auto: false,
               },
               geometry: { type: 'Polygon', coordinates: [[[230748, 6759646], [230752, 6759646], [230752, 6759644], [230748, 6759644], [230748, 6759646]]] },
             }],
@@ -288,6 +291,7 @@ describe('route/patch.js', () => {
               properties: {
                 color: overviews.list_OPI[testOpi].color,
                 opiName: testOpi,
+                is_auto: false,
               },
               geometry: { type: 'Polygon', coordinates: [[[230748, 6759646], [230752, 6759646], [230752, 6759644], [230748, 6759644], [230748, 6759646]]] },
             }],

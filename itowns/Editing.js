@@ -132,16 +132,13 @@ class Editing {
         {
           type: 'Feature',
           properties: {
-            opiRef: {
-              name: this.opi1Name,
-              color: this.opi1Color,
-            },
+            is_auto: !this.saisie.type,
+            opiName: this.opi1Name,
+            color: this.opi1Color,
             ...(!this.saisie.type && {
-              opiSec: {
-                name: this.opi2Name,
-                color: this.opi2Color,
-              },
-            }),
+              opiNameSec: this.opi2Name,
+              colorSec: this.opi2Color}
+            ),
           },
           geometry:
                     {
