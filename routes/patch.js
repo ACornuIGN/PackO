@@ -39,8 +39,6 @@ const geoJsonAPatcher = [
     .exists().withMessage(createErrMsg.missingParameter('crs'))
     .custom(validator.isCrs)
     .withMessage(createErrMsg.invalidParameter('crs')),
-  body('geoJSON.features.*.geometry')
-    .custom(GJV.isPolygon).withMessage(createErrMsg.InvalidEntite('geometry', 'polygon')),
   body('geoJSON.features.*.properties')
     .exists().withMessage(createErrMsg.missingParameter('properties')),
   body('geoJSON.features.*.properties.is_auto')
@@ -48,6 +46,9 @@ const geoJsonAPatcher = [
     .withMessage(createErrMsg.missingParameter('is_auto'))
     .isBoolean()
     .withMessage(createErrMsg.invalidParameter('is_auto')),
+  body('geoJSON.features.*.geometry')
+    .custom((value) => (GJV.isPolygon(value)))
+    .withMessage(createErrMsg.InvalidEntite('geometry', 'polygon')),
 
   body('geoJSON.features.*.properties.opiName')
     .if(body('geoJSON.features.*.properties').exists())
