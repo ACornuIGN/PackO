@@ -203,6 +203,7 @@ jobs:
         PGUSER: postgres
         PGPASSWORD: postgres
         PGDATABASE: packo
+        OZEXE: "./regress/data/ozcpp.sh"
         DEBUG:
       run: |
         npm run coveralls-api
