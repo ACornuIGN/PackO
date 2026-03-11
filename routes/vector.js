@@ -44,7 +44,7 @@ const vectorToSave = [
   //   .withMessage(createErrMsg.invalidParameter('crs')),
   body('json.data.features.*.geometry')
     .custom((value) => (GJV.isPolygon(value)))
-    .withMessage(createErrMsg.InvalidEntite('data.features.*.geometry', 'polygon')),
+    .withMessage(createErrMsg.InvalidEntity('data.features.*.geometry', 'polygon')),
 ];
 
 router.get('/:idBranch/vectors',

@@ -42,13 +42,21 @@ const geoJsonAPatcher = [
   body('geoJSON.features.*.properties')
     .exists().withMessage(createErrMsg.missingParameter('properties')),
   body('geoJSON.features.*.properties.is_auto')
-    .exists()
-    .withMessage(createErrMsg.missingParameter('is_auto'))
+    .exists().withMessage(createErrMsg.missingParameter('is_auto'))
     .isBoolean()
-    .withMessage(createErrMsg.invalidParameter('is_auto')),
+    .withMessage(createErrMsg.invalidParameter('is_auto'))
+    .custom((value, { req }) => { req.result.is_auto = value; return true; }),
   body('geoJSON.features.*.geometry')
-    .custom((value) => (GJV.isPolygon(value)))
-    .withMessage(createErrMsg.InvalidEntite('geometry', 'polygon')),
+    .exists().withMessage(createErrMsg.missingParameter('geometry'))
+    .custom((value, { req }) => {
+      if (req.result.is_auto && !GJV.isLineString(value)) {
+        throw new Error(createErrMsg.InvalidEntity('geometry', 'LineString'));
+      }
+      if (!req.result.is_auto && !GJV.isPolygon(value)) {
+        throw new Error(createErrMsg.InvalidEntity('geometry', 'Polygon'));
+      }
+      return true;
+    }),
 
   body('geoJSON.features.*.properties.opiName')
     .if(body('geoJSON.features.*.properties').exists())
