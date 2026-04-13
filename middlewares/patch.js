@@ -378,7 +378,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
         debug('  >>>> IR seul');
         patch.urlOrthoIrOutput = path.join(urlOutputData,
           'out_ortho',
-          `out_${filename}_georef.tif`);
+          `out_${filename}i_georef.tif`);
       }
 
       /* eslint-enable no-param-reassign */
