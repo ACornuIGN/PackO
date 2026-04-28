@@ -11,6 +11,7 @@ const cachePath = './cache_test/cache_test_RGBIR';
 const overviews = JSON.parse(fs.readFileSync(`${cachePath}/overviews.json`, 'utf8'));
 const cacheName = 'cacheRegress';
 const testOpi = '19FD5606Ax00020_16371';
+const testOpi2 = '19FD5606Ax00020_16372';
 
 let idCache = null;
 function setIdCache(id) {
@@ -99,6 +100,7 @@ describe('route/patch.js', () => {
                 properties: {
                   color: overviews.list_OPI[testOpi].color,
                   opiName: testOpi,
+                  is_auto: false,
                 },
                 geometry: { type: 'Polygon', coordinates: [[[230749, 6759646], [230752, 6759646], [230752, 6759644], [230749, 6759644], [230749, 6759646]]] },
               }],
@@ -123,6 +125,7 @@ describe('route/patch.js', () => {
                 properties: {
                   color: overviews.list_OPI[testOpi].color,
                   opiName: testOpi,
+                  is_auto: false,
                 },
                 geometry: { type: 'Polygon', coordinates: [[[230748, 6759736], [230746, 6759736], [230746, 6759734], [230748, 6759734], [230748, 6759736]]] },
               }],
@@ -130,6 +133,82 @@ describe('route/patch.js', () => {
           .end((err, res) => {
             should.not.exist(err);
             res.should.have.status(404);
+            done();
+          });
+      }).timeout(9000);
+      it("should get a error: 'Le parametre geometry n'est pas un LineString valide.'", (done) => {
+        chai.request(app)
+          .post(`/${idBranch[branchName]}/patch`)
+          .send({
+            type: 'FeatureCollection',
+            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            features: [
+              {
+                type: 'Feature',
+                properties: {
+                  color: overviews.list_OPI[testOpi].color,
+                  opiName: testOpi,
+                  is_auto: true,
+                },
+                geometry: { type: 'Polygon', coordinates: [[[230749, 6759646], [230752, 6759646], [230752, 6759644], [230749, 6759644], [230749, 6759646]]] },
+              }],
+          })
+          .end((err, res) => {
+            should.not.exist(err);
+            res.should.have.status(400);
+            done();
+          });
+      }).timeout(9000);
+    });
+    describe('body: linestring geoJson', () => {
+      // waiting for ozcpp in ci
+      it('should apply the semi auto patch and return the list of tiles impacted', (done) => {
+        chai.request(app)
+          .post(`/${idBranch[branchName]}/patch`)
+          .send({
+            type: 'FeatureCollection',
+            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            features: [
+              {
+                type: 'Feature',
+                properties: {
+                  color: overviews.list_OPI[testOpi].color,
+                  opiName: testOpi,
+                  colorSec: overviews.list_OPI[testOpi2].color,
+                  opiNameSec: testOpi2,
+                  is_auto: true,
+                },
+                geometry: { type: 'LineString', coordinates: [[230751, 6759645], [230750, 6759645], [230750, 6759644], [230751, 6759644]] },
+              }],
+          })
+          .end((err, res) => {
+            should.not.exist(err);
+            res.should.have.status(200);
+            done();
+          });
+      }).timeout(9000);
+      it("should get a error: 'Le parametre geometry n'est pas un Polygone valide.'", (done) => {
+        chai.request(app)
+          .post(`/${idBranch[branchName]}/patch`)
+          .send({
+            type: 'FeatureCollection',
+            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            features: [
+              {
+                type: 'Feature',
+                properties: {
+                  color: overviews.list_OPI[testOpi].color,
+                  opiName: testOpi,
+                  colorSec: overviews.list_OPI[testOpi2].color,
+                  opiNameSec: testOpi2,
+                  is_auto: false,
+                },
+                geometry: { type: 'LineString', coordinates: [[230751, 6759645], [230750, 6759645], [230750, 6759644], [230751, 6759644]] },
+              }],
+          })
+          .end((err, res) => {
+            should.not.exist(err);
+            res.should.have.status(400);
             done();
           });
       }).timeout(9000);
@@ -152,13 +231,13 @@ describe('route/patch.js', () => {
   });
 
   describe('PUT /{idBranch}/patch/undo', () => {
-    it("should return 'undo: patch 1 annulé'", (done) => {
+    it("should return 'undo: patch 2 annulé'", (done) => {
       chai.request(app)
         .put(`/${idBranch[branchName]}/patch/undo`)
         .end((err, res) => {
           should.not.exist(err);
           res.should.have.status(200);
-          JSON.parse(res.text).should.equal('undo: patch 1 annulé');
+          JSON.parse(res.text).should.equal('undo: patch 2 annulé');
           done();
         });
     });
@@ -167,10 +246,17 @@ describe('route/patch.js', () => {
         .put(`/${idBranch[branchName]}/patch/undo`)
         .end((err, res) => {
           should.not.exist(err);
-          res.should.have.status(201);
-          JSON.parse(res.text).should.equal('rien à annuler');
-          done();
-        });
+          res.should.have.status(200);
+
+          chai.request(app)
+            .put(`/${idBranch[branchName]}/patch/undo`)
+            .end((err, res) => {
+              should.not.exist(err);
+              res.should.have.status(201);
+              JSON.parse(res.text).should.equal('rien à annuler');
+              done();
+            });
+      });
     });
     it('idBranch=99999 => should return an error', (done) => {
       chai.request(app)
@@ -202,10 +288,18 @@ describe('route/patch.js', () => {
         .put(`/${idBranch[branchName]}/patch/redo`)
         .end((err, res) => {
           should.not.exist(err);
-          res.should.have.status(201);
-          JSON.parse(res.text).should.equal('rien à réappliquer');
-          done();
-        });
+          res.should.have.status(200);
+          JSON.parse(res.text).should.to.include('réappliqué');
+
+          chai.request(app)
+            .put(`/${idBranch[branchName]}/patch/redo`)
+            .end((err, res) => {
+              should.not.exist(err);
+              res.should.have.status(201);
+              JSON.parse(res.text).should.equal('rien à réappliquer');
+              done();
+            });
+      });
     });
     it("should return 'redo: patch xxx réappliqué'", (done) => {
       // Ajout d'un nouveau patch
@@ -220,6 +314,7 @@ describe('route/patch.js', () => {
               properties: {
                 color: overviews.list_OPI[testOpi].color,
                 opiName: testOpi,
+                is_auto: false,
               },
               geometry: { type: 'Polygon', coordinates: [[[230748, 6759646], [230752, 6759646], [230752, 6759644], [230748, 6759644], [230748, 6759646]]] },
             }],
@@ -236,7 +331,7 @@ describe('route/patch.js', () => {
             .end((err1, res1) => {
               should.not.exist(err1);
               res1.should.have.status(200);
-              JSON.parse(res1.text).should.equal('undo: patch 2 annulé');
+              JSON.parse(res1.text).should.equal('undo: patch 3 annulé');
 
               // Pour refaire un redo
               chai.request(app)
@@ -244,7 +339,7 @@ describe('route/patch.js', () => {
                 .end((err2, res2) => {
                   should.not.exist(err2);
                   res2.should.have.status(200);
-                  JSON.parse(res2.text).should.equal('redo: patch 2 réappliqué');
+                  JSON.parse(res2.text).should.equal('redo: patch 3 réappliqué');
                   done();
                 });
             });
@@ -288,6 +383,7 @@ describe('route/patch.js', () => {
               properties: {
                 color: overviews.list_OPI[testOpi].color,
                 opiName: testOpi,
+                is_auto: false,
               },
               geometry: { type: 'Polygon', coordinates: [[[230748, 6759646], [230752, 6759646], [230752, 6759644], [230748, 6759644], [230748, 6759646]]] },
             }],
@@ -304,7 +400,7 @@ describe('route/patch.js', () => {
             .end((err1, res1) => {
               should.not.exist(err1);
               res1.should.have.status(200);
-              JSON.parse(res1.text).should.equal('undo: patch 3 annulé');
+              JSON.parse(res1.text).should.equal('undo: patch 4 annulé');
 
               // Pour faire le clear
               chai.request(app)

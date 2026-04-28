@@ -296,17 +296,17 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const feature = geojson.features[0];
   debug('applyPatch', feature);
 
-  const opiRef = (await db.getOPIFromName(pgClient, idBranch, feature.properties.opiRef.name));
+  const opi = (await db.getOPIFromName(pgClient, idBranch, feature.properties.opiName));
   // patch auto
   let opiSec = {
     id: null,
   };
-  const patchIsAuto = !!feature.properties.opiSec.name;
+  const patchIsAuto = feature.properties.is_auto;
   if (patchIsAuto) {
-    opiSec = (await db.getOPIFromName(pgClient, idBranch, feature.properties.opiSec.name));
+    opiSec = (await db.getOPIFromName(pgClient, idBranch, feature.properties.opiNameSec));
   }
   const patchInserted = await db.insertPatch(pgClient, idBranch, feature.geometry,
-    opiRef.id, opiSec.id, patchIsAuto);
+    opi.id, opiSec.id, patchIsAuto);
   const patchId = patchInserted.id_patch;
   const newPatchNum = patchInserted.num;
 
@@ -325,12 +325,12 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   cogs.forEach((aCog) => {
     promisesCreatePatch.push(createPatch(aCog,
       feature,
-      feature.properties.opiRef.color,
-      feature.properties.opiRef.name,
-      feature.properties.opiSec.color,
-      feature.properties.opiSec.name,
-      opiRef.with_rgb,
-      opiRef.with_ir,
+      feature.properties.color,
+      feature.properties.opiName,
+      patchIsAuto ? feature.properties.colorSec : null,
+      patchIsAuto ? feature.properties.opiNameSec : null,
+      opi.with_rgb,
+      opi.with_ir,
       overviews,
       dirCache,
       idBranch,

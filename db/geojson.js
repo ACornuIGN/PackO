@@ -19,17 +19,10 @@ async function writeGeojson(idBranch, idPatch, cachePath, geojson) {
   geojsonAna.name = `${idBranch}_${idPatch}`;
 
   const prop = geojson.features[0].properties;
-  if (prop.opiSec.name) {
+  if (prop.is_auto) {
     geojsonAna.features[0].geometry.type = 'MultiLineString';
   }
   geojsonAna.features[0].geometry.coordinates = [geojsonAna.features[0].geometry.coordinates];
-
-  geojsonAna.features[0].properties = {
-    opiName: prop.opiRef.name,
-    color: prop.opiRef.color,
-    opiName2: prop.opiSec.name,
-    colorSec: prop.opiSec.color,
-  };
 
   try {
     fs.writeFileSync(filePath, JSON.stringify(geojsonAna, null, 2), 'utf8');
