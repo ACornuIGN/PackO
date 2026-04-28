@@ -244,9 +244,9 @@ describe('route/patch.js', () => {
     it("should return a warning (code 201): 'rien à annuler'", (done) => {
       chai.request(app)
         .put(`/${idBranch[branchName]}/patch/undo`)
-        .end((err, res) => {
-          should.not.exist(err);
-          res.should.have.status(200);
+        .end((errUndo, resUndo) => {
+          should.not.exist(errUndo);
+          resUndo.should.have.status(200);
 
           chai.request(app)
             .put(`/${idBranch[branchName]}/patch/undo`)
@@ -256,7 +256,7 @@ describe('route/patch.js', () => {
               JSON.parse(res.text).should.equal('rien à annuler');
               done();
             });
-      });
+        });
     });
     it('idBranch=99999 => should return an error', (done) => {
       chai.request(app)
@@ -286,10 +286,10 @@ describe('route/patch.js', () => {
     it("should return a warning (code 201): 'rien à réappliquer'", (done) => {
       chai.request(app)
         .put(`/${idBranch[branchName]}/patch/redo`)
-        .end((err, res) => {
-          should.not.exist(err);
-          res.should.have.status(200);
-          JSON.parse(res.text).should.to.include('réappliqué');
+        .end((errRedo, resRedo) => {
+          should.not.exist(errRedo);
+          resRedo.should.have.status(200);
+          JSON.parse(resRedo.text).should.to.include('réappliqué');
 
           chai.request(app)
             .put(`/${idBranch[branchName]}/patch/redo`)
@@ -299,7 +299,7 @@ describe('route/patch.js', () => {
               JSON.parse(res.text).should.equal('rien à réappliquer');
               done();
             });
-      });
+        });
     });
     it("should return 'redo: patch xxx réappliqué'", (done) => {
       // Ajout d'un nouveau patch
