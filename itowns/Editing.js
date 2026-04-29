@@ -137,8 +137,8 @@ class Editing {
             color: this.opi1Color,
             ...(!this.saisie.type && {
               opiNameSec: this.opi2Name,
-              colorSec: this.opi2Color}
-            ),
+              colorSec: this.opi2Color,
+            }),
           },
           geometry:
                     {
