@@ -125,12 +125,13 @@ async function getActivePatches(pgClient, idBranch) {
 
   const sql = "SELECT json_build_object('type', 'FeatureCollection', "
   + "'features', json_agg(ST_AsGeoJSON(s.*)::json)) FROM "
-  + '(SELECT t.*, o.name as "opiName", o.color FROM '
+  + '(SELECT t.*, c.crs, o.name as "opiName", o.color FROM '
   + '(SELECT p.*, ARRAY_AGG(ARRAY[s.x, s.y, s.z]) as slabs '
   + 'FROM patches p LEFT JOIN slabs s ON p.id = s.id_patch WHERE p.id_branch = $1 '
   + 'AND p.active=True '
-  + 'GROUP BY p.id ORDER BY p.num) as t, opi o '
-  + 'WHERE t.id_opi = o.id) as s';
+  + 'GROUP BY p.id ORDER BY p.num) as t,'
+  + '(SELECT c.crs FROM branches b, caches c WHERE b.id_cache = c.id AND b.id = $1) as c,'
+  + ' opi o WHERE t.id_opi = o.id) as s';
 
   debug(sql);
 

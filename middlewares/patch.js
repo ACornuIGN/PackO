@@ -218,6 +218,13 @@ async function getPatches(req, _res, next) {
   const { idBranch } = params;
   try {
     const activePatches = await db.getActivePatches(req.client, idBranch);
+    if (!(activePatches.features.length === 0)) {
+      const nameCrs = activePatches.features[0].properties.crs;
+      activePatches.crs = {
+        type: 'name',
+        properties: { name: `urn:ogc:def:crs:${nameCrs.replace(':', '::')}` },
+      };
+    }
     req.result = { json: activePatches, code: 200 };
   } catch (error) {
     debug(error);
