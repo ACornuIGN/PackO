@@ -123,15 +123,34 @@ async function deleteBranch(pgClient, idBranch) {
 async function getActivePatches(pgClient, idBranch) {
   debug(`    ~~getActivePatches (idBranch: ${idBranch})`);
 
-  const sql = "SELECT json_build_object('type', 'FeatureCollection', "
-  + "'features', json_agg(ST_AsGeoJSON(s.*)::json)) FROM "
-  + '(SELECT t.*, c.crs, o.name as "opiName", o.color FROM '
-  + '(SELECT p.*, ARRAY_AGG(ARRAY[s.x, s.y, s.z]) as slabs '
-  + 'FROM patches p LEFT JOIN slabs s ON p.id = s.id_patch WHERE p.id_branch = $1 '
-  + 'AND p.active=True '
-  + 'GROUP BY p.id ORDER BY p.num) as t,'
-  + '(SELECT c.crs FROM branches b, caches c WHERE b.id_cache = c.id AND b.id = $1) as c,'
-  + ' opi o WHERE t.id_opi = o.id) as s';
+  const sql = "SELECT json_build_object('type', 'FeatureCollection', 'crs', "
+    + "json_build_object( 'type', 'name', 'properties', "
+    + "json_build_object('name', 'urn:ogc:def:crs:' || REPLACE((SELECT c.crs "
+    + 'FROM branches b '
+    + 'JOIN caches c ON b.id_cache = c.id '
+    + "WHERE b.id = $1), ':', '::'))), "
+    + "'features', json_agg(ST_AsGeoJSON(s.*)::json ORDER BY s.num DESC) "
+    + 'FILTER (WHERE s.id IS NOT NULL)) '
+    + 'FROM ( '
+    + ' SELECT '
+    + '  t.*, '
+    + '  o.name AS "opiName", '
+    + '  o.color, '
+    + '  o2.name AS "opiNameSec", '
+    + '  o2.color AS "colorSec" '
+    + ' FROM ( '
+    + '  SELECT '
+    + '   p.*, '
+    + '   ARRAY_AGG(ARRAY[s.x, s.y, s.z]) AS slabs '
+    + '  FROM patches p '
+    + '  LEFT JOIN slabs s ON p.id = s.id_patch '
+    + '  WHERE p.id_branch = $1 '
+    + '  AND p.active = TRUE '
+    + '  GROUP BY p.id '
+    + '  ORDER BY p.num DESC'
+    + ' ) AS t '
+    + ' JOIN opi o ON t.id_opi = o.id '
+    + ' LEFT JOIN opi o2 ON t.id_opisec = o2.id AND t.is_auto ) AS s';
 
   debug(sql);
 

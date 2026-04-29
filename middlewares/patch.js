@@ -218,13 +218,6 @@ async function getPatches(req, _res, next) {
   const { idBranch } = params;
   try {
     const activePatches = await db.getActivePatches(req.client, idBranch);
-    if (!(activePatches.features.length === 0)) {
-      const nameCrs = activePatches.features[0].properties.crs;
-      activePatches.crs = {
-        type: 'name',
-        properties: { name: `urn:ogc:def:crs:${nameCrs.replace(':', '::')}` },
-      };
-    }
     req.result = { json: activePatches, code: 200 };
   } catch (error) {
     debug(error);
@@ -277,7 +270,7 @@ function ozCppExe(patches, outputDir, geojsonPath) {
       (err, stdout) => {
         debugOzcpp(stdout);
         if (err) {
-          console.log(err);
+          console.warn(err);
           rej(err);
         } else {
           res(`${stdout} OK`);
@@ -373,7 +366,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
       }
       if (patch.withIr && patch.withRgb) {
         debug('  >>>> RGB + IR');
-        console.log('WARNING: Cache RGB + IR : le nouveau patch ne sera pas appliqué aux images IR');
+        console.warn('WARNING: Cache RGB + IR : le nouveau patch ne sera pas appliqué aux images IR');
         patch.urlOrthoIrOutput = path.join(dirCache,
           'ortho', patch.cogPath.dirPath,
           `${idBranch}_${patch.cogPath.filename}_${newPatchNum}i.tif`);

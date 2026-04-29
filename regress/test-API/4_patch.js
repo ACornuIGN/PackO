@@ -13,6 +13,8 @@ const cacheName = 'cacheRegress';
 const testOpi = '19FD5606Ax00020_16371';
 const testOpi2 = '19FD5606Ax00020_16372';
 
+const crs = 'urn:ogc:def:crs:EPSG::2154';
+
 let idCache = null;
 function setIdCache(id) {
   idCache = id;
@@ -93,7 +95,7 @@ describe('route/patch.js', () => {
           .post(`/${idBranch[branchName]}/patch`)
           .send({
             type: 'FeatureCollection',
-            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            crs: { type: 'name', properties: { name: crs } },
             features: [
               {
                 type: 'Feature',
@@ -118,7 +120,7 @@ describe('route/patch.js', () => {
           .post(`/${idBranch[branchName]}/patch`)
           .send({
             type: 'FeatureCollection',
-            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            crs: { type: 'name', properties: { name: crs } },
             features: [
               {
                 type: 'Feature',
@@ -141,7 +143,7 @@ describe('route/patch.js', () => {
           .post(`/${idBranch[branchName]}/patch`)
           .send({
             type: 'FeatureCollection',
-            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            crs: { type: 'name', properties: { name: crs } },
             features: [
               {
                 type: 'Feature',
@@ -167,7 +169,7 @@ describe('route/patch.js', () => {
           .post(`/${idBranch[branchName]}/patch`)
           .send({
             type: 'FeatureCollection',
-            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            crs: { type: 'name', properties: { name: crs } },
             features: [
               {
                 type: 'Feature',
@@ -192,7 +194,7 @@ describe('route/patch.js', () => {
           .post(`/${idBranch[branchName]}/patch`)
           .send({
             type: 'FeatureCollection',
-            crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+            crs: { type: 'name', properties: { name: crs } },
             features: [
               {
                 type: 'Feature',
@@ -225,6 +227,7 @@ describe('route/patch.js', () => {
           const resJson = JSON.parse(res.text);
           GJV.isGeoJSONObject(resJson).should.be.a('boolean').equal(true);
           GJV.isFeatureCollection(resJson).should.be.a('boolean').equal(true);
+          resJson.crs.properties.name.should.to.equal(crs);
           done();
         });
     });
@@ -307,7 +310,7 @@ describe('route/patch.js', () => {
         .post(`/${idBranch[branchName]}/patch`)
         .send({
           type: 'FeatureCollection',
-          crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+          crs: { type: 'name', properties: { name: crs } },
           features: [
             {
               type: 'Feature',
@@ -376,7 +379,7 @@ describe('route/patch.js', () => {
         .post(`/${idBranch[branchName]}/patch`)
         .send({
           type: 'FeatureCollection',
-          crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+          crs: { type: 'name', properties: { name: crs } },
           features: [
             {
               type: 'Feature',
