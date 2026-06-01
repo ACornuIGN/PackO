@@ -237,6 +237,9 @@ function ozCppExe(patches, outputDir, geojsonPath) {
   const arrArgsS = ['-s'];
   const arrArgsG = ['-g'];
   const arrArgsO = ['-or'];
+  const arrArgsRc = ['-rc'];
+  const arrArgsSc = ['-sc'];
+  const arrArgsOc = ['-orc'];
   patches.forEach((patch) => {
     arrArgsR.push(patch.withRgb ? patch.urlOpiRefRgb : patch.urlOpiRefIr);
     arrArgsS.push(patch.withRgb ? patch.urlOpiSecRgb : patch.urlOpiSecIr);
@@ -246,8 +249,14 @@ function ozCppExe(patches, outputDir, geojsonPath) {
     } else {
       arrArgsO.push(patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr);
     }
+    if (patch.withRgb && patch.withIr) {
+      arrArgsRc.push(patch.urlOpiRefIr);
+      arrArgsSc.push(patch.urlOpiSecIr);
+      arrArgsOc.push(patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr);
+    }
   });
-  const arrArgs = [...arrArgsR, ...arrArgsS, ...arrArgsG, ...arrArgsO, '-p', geojsonPath];
+  const arrArgs = [...arrArgsR, ...arrArgsRc, ...arrArgsS, ...arrArgsSc,
+    ...arrArgsG, ...arrArgsO, ...arrArgsOc, '-p', geojsonPath];
   const options = {
     weightDiffCost: 0.95,
     weightTransition: 10,
@@ -277,19 +286,6 @@ function ozCppExe(patches, outputDir, geojsonPath) {
         }
       });
   });
-}
-
-// Maybe move that function to a specifique file.js file
-// duplicate in regress\test-API\3_branch
-function copyFileSync(source, target) {
-  let targetFile = target;
-  // If target is a directory, the copy will have the same name as the source
-  if (fs.existsSync(target)) {
-    if (fs.lstatSync(target).isDirectory()) {
-      targetFile = path.join(target, path.basename(source));
-    }
-  }
-  fs.writeFileSync(targetFile, fs.readFileSync(source));
 }
 
 async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
@@ -364,18 +360,9 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
           'out_ortho',
           `out_${filename}_georef.tif`);
       }
-      if (patch.withIr && patch.withRgb) {
-        debug('  >>>> RGB + IR');
-        console.warn('WARNING: Cache RGB + IR : le nouveau patch ne sera pas appliqué aux images IR');
-        patch.urlOrthoIrOutput = path.join(dirCache,
-          'ortho', patch.cogPath.dirPath,
-          `${idBranch}_${patch.cogPath.filename}_${newPatchNum}i.tif`);
 
-        const urlOrthoIr = patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr;
-        copyFileSync(urlOrthoIr, patch.urlOrthoIrOutput);
-      }
-      if (patch.withIr && !patch.withRgb) {
-        debug('  >>>> IR seul');
+      if (patch.withIr) {
+        debug('  >>>> IR');
         patch.urlOrthoIrOutput = path.join(urlOutputData,
           'out_ortho',
           `out_${filename}i_georef.tif`);
@@ -461,7 +448,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
       debug(' historique :', history);
       fs.writeFileSync(`${urlHistory}`, history);
     } else {
-      debug('history n\'existe pas encore');
+      debug('le fichier \'history\' n\'existe pas encore');
       const history = `orig;${newPatchNum}`;
       fs.writeFileSync(`${urlHistory}`, history);
       // On a pas besoin de renommer l'image d'origine
