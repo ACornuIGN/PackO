@@ -217,30 +217,34 @@ function wmts(req, _res, next) {
     }
     try {
       const cogPath = cog.getTileInfo(TILECOL, TILEROW, TILEMATRIX, overviews);
-      let urlBranch = path.join(req.dir_cache,
-        layerName,
-        cogPath.dirPath,
-        `${idBranch}_${cogPath.filename}`);
-      let url = path.join(req.dir_cache,
-        layerName,
-        cogPath.dirPath,
-        `${cogPath.filename}`);
+      let cogRgbFilename = `${idBranch}_${cogPath.filename}`;
+      let cogIrFilename = `${cogRgbFilename}i`;
+      let cogOrigFilename = `${cogPath.filename}`;
+      // Cas des opis:
+      // Les opis ne sont jamais modifiées par une saisie,
+      // il faut donc prendre celles d'origine en RVB et IR.
       if (LAYER === 'opi') {
         if (!Name) {
           [Name] = Object.keys(overviews.list_OPI);
         }
         debugGetTile('Name : ', Name);
-        url += `_${Name}`;
-        // Pas de gestion de branche pour les OPI
-        urlBranch = url;
+        cogOrigFilename += `_${Name}`;
+        cogRgbFilename = cogOrigFilename;
+        cogIrFilename = cogOrigFilename.replace('x', '_ix');
       }
-      urlBranch += '.tif';
-      url += '.tif';
-      // si jamais la version de la branche existe, c'est elle qu'il faut utiliser
-      debug(url, urlBranch);
-      if (fs.existsSync(urlBranch)) {
+      const cogDirUrl = path.join(req.dir_cache, layerName, cogPath.dirPath);
+      let cogUrl = path.join(cogDirUrl, `${cogOrigFilename}.tif`);
+
+      debug('cogDirUrl:', cogDirUrl, 'cogOrigFilename: ', cogOrigFilename,
+        'cogRgbFilename: ', cogRgbFilename, 'cogIrFilename: ', cogIrFilename);
+      // On teste la présence de fichiers avec saisie en RVB et IR, pour gérer les
+      // caches juste RVB ou juste IR. Par la suite, on ne garde que le chemin RVB
+      // car dans gdalProcessing.getTileEncoded, il recalcule le chemin IR et ne
+      // prend en compte que les fichiers présents.
+      if (fs.existsSync(path.join(cogDirUrl, `${cogRgbFilename}.tif`))
+          || fs.existsSync(path.join(cogDirUrl, `${cogIrFilename}.tif`))) {
         debug('version branche');
-        url = urlBranch;
+        cogUrl = path.join(cogDirUrl, `${cogRgbFilename}.tif`);
       } else {
         debug('version orig');
       }
@@ -258,7 +262,7 @@ function wmts(req, _res, next) {
           break;
         default:
       }
-      gdalProcessing.getTileEncoded(url,
+      gdalProcessing.getTileEncoded(cogUrl,
         cogPath.x, cogPath.y, cogPath.z,
         formatGDAL, overviews.tileSize.width, bands)
         .then((img) => {
