@@ -120,10 +120,17 @@ async function deleteBranch(pgClient, idBranch) {
   return results.rows.length > 0 ? results.rows[0].name : null;
 }
 
-async function getActivePatches(pgClient, idBranch) {
-  debug(`    ~~getActivePatches (idBranch: ${idBranch})`);
+async function getActivePatches(pgClient, idBranch, nbPatches) {
+  debug(`    ~~getActivePatches (idBranch: ${idBranch}, nbPatches: ${nbPatches})`);
 
-  const sql = "SELECT json_build_object('type', 'FeatureCollection', 'crs', "
+  let limit = '';
+  const params = [idBranch];
+  if (nbPatches > 0) {
+    limit = 'LIMIT $2';
+    params.push(nbPatches);
+  }
+
+  const query = "SELECT json_build_object('type', 'FeatureCollection', 'crs', "
     + "json_build_object( 'type', 'name', 'properties', "
     + "json_build_object('name', 'urn:ogc:def:crs:' || REPLACE((SELECT c.crs "
     + 'FROM branches b '
@@ -147,16 +154,14 @@ async function getActivePatches(pgClient, idBranch) {
     + '  WHERE p.id_branch = $1 '
     + '  AND p.active = TRUE '
     + '  GROUP BY p.id '
-    + '  ORDER BY p.num DESC'
+    + `  ORDER BY p.num DESC ${limit}`
     + ' ) AS t '
     + ' JOIN opi o ON t.id_opi = o.id '
     + ' LEFT JOIN opi o2 ON t.id_opisec = o2.id AND t.is_auto ) AS s';
 
-  debug(sql);
+  debug(query);
+  const results = await pgClient.query(query, params);
 
-  const results = await pgClient.query(
-    sql, [idBranch],
-  );
   // cas ou il n'y a pas de patches actifs en base
   if (results.rows[0].json_build_object.features === null) {
     results.rows[0].json_build_object.features = [];

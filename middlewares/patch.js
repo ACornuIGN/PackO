@@ -215,9 +215,9 @@ async function getPatches(req, _res, next) {
     return;
   }
   const params = matchedData(req);
-  const { idBranch } = params;
+  const { idBranch, nbPatches } = params;
   try {
-    const activePatches = await db.getActivePatches(req.client, idBranch);
+    const activePatches = await db.getActivePatches(req.client, idBranch, nbPatches);
     req.result = { json: activePatches, code: 200 };
   } catch (error) {
     debug(error);

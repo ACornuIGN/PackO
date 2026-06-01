@@ -218,7 +218,7 @@ describe('route/patch.js', () => {
   });
 
   describe('GET /{idBranch}/patches', () => {
-    it('should return an valid geoJson', (done) => {
+    it('should return a valid geoJson', (done) => {
       chai.request(app)
         .get(`/${idBranch[branchName]}/patches`)
         .end((err, res) => {
@@ -228,6 +228,48 @@ describe('route/patch.js', () => {
           GJV.isGeoJSONObject(resJson).should.be.a('boolean').equal(true);
           GJV.isFeatureCollection(resJson).should.be.a('boolean').equal(true);
           resJson.crs.properties.name.should.to.equal(crs);
+          done();
+        });
+    });
+  });
+  describe('GET /{idBranch}/lastpatches', () => {
+    it('should return last patch on the branch with 2 patches', (done) => {
+      chai.request(app)
+        .get(`/${idBranch[branchName]}/patches?nbPatches=1`)
+        .end((err, res) => {
+          should.not.exist(err);
+          res.should.have.status(200);
+          const resJson = JSON.parse(res.text);
+          GJV.isGeoJSONObject(resJson).should.be.a('boolean').equal(true);
+          GJV.isFeatureCollection(resJson).should.be.a('boolean').equal(true);
+          resJson.features.should.have.lengthOf(1);
+          resJson.features[0].properties.should.have.property('num', 2);
+          done();
+        });
+    });
+    it('should return 2 patches when nbPatches=2 and there are 2 patches on the branch', (done) => {
+      chai.request(app)
+        .get(`/${idBranch[branchName]}/patches?nbPatches=2`)
+        .end((err, res) => {
+          should.not.exist(err);
+          res.should.have.status(200);
+          const resJson = JSON.parse(res.text);
+          GJV.isGeoJSONObject(resJson).should.be.a('boolean').equal(true);
+          GJV.isFeatureCollection(resJson).should.be.a('boolean').equal(true);
+          resJson.features.should.have.lengthOf(2);
+          done();
+        });
+    });
+    it('should return 2 patches when nbPatches>2 and there are 2 patches on the branch', (done) => {
+      chai.request(app)
+        .get(`/${idBranch[branchName]}/patches?nbPatches=100`)
+        .end((err, res) => {
+          should.not.exist(err);
+          res.should.have.status(200);
+          const resJson = JSON.parse(res.text);
+          GJV.isGeoJSONObject(resJson).should.be.a('boolean').equal(true);
+          GJV.isFeatureCollection(resJson).should.be.a('boolean').equal(true);
+          resJson.features.should.have.lengthOf(2);
           done();
         });
     });

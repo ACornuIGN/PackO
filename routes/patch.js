@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const GJV = require('geojson-validation');
 const cache = require('../middlewares/cache');
 const branch = require('../middlewares/branch');
@@ -85,7 +85,7 @@ const geoJsonAPatcher = [
     .withMessage(createErrMsg.invalidParameter('properties.colorSec')),
 ];
 
-router.get('/:idBranch/patches',
+const getPatches = [
   pgClient.open,
   branch.getBranches.bind({ column: 'id' }),
   [
@@ -93,11 +93,19 @@ router.get('/:idBranch/patches',
       .exists().withMessage(createErrMsg.missingParameter('idBranch'))
       .custom((value, { req }) => req.result.getBranches.includes(Number(value)))
       .withMessage(createErrMsg.invalidParameter('idBranch')),
+    query('nbPatches')
+      .if(query('nbPatches').exists())
+      .isInt({ min: 1 })
+      .withMessage(createErrMsg.invalidParameter('nbPatches')),
   ],
   validateParams,
   patch.getPatches,
   pgClient.close,
-  returnMsg);
+  returnMsg,
+];
+
+router.get('/:idBranch/patches', getPatches);
+router.get('/:idBranch/lastpatches', getPatches);
 
 router.post('/:idBranch/patch',
   encapBody.bind({ keyName: 'geoJSON' }),

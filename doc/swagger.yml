@@ -308,6 +308,30 @@ paths:
         '200':
           description: OK
 
+  '/{idBranch}/lastpatches':
+    get:
+      tags:
+        - patch
+      summary: "Récupération des n derniers patchs de correction en format json"
+      description: ""
+      parameters:
+        - in: path
+          name: idBranch
+          description: l'identifiant de la branche
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: nbPatches
+          description: le nombre des n derniers patchs voulus
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: OK
+
   '/{idBranch}/patch':
     post:
       tags:
