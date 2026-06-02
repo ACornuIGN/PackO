@@ -128,7 +128,7 @@ class Branch {
   }
 
   createBranch() {
-    this.viewer.setMessage();
+    this.viewer.view.dispatchEvent({type: 'messageChanged'});
     // eslint-disable-next-line no-alert
     const branchName = window.prompt('Choose a new branch name:', '');
     const errors = [];
@@ -165,9 +165,13 @@ class Branch {
       })
       .catch((error) => {
         if (error.name === 'Server Error') {
-          this.viewer.setMessage('la branche existe déjà', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'la branche existe déjà',
+            alert: true});
         } else {
-          this.viewer.setMessage('PB de mise à jour de la BdD', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'PB with updating the database',
+            alert: true});
           this.view.dispatchEvent({
             type: 'error',
             msg: error,
@@ -191,7 +195,9 @@ class Branch {
           resolve();
         })
         .catch(() => {
-          this.viewer.setMessage('PB with updating the database', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'PB with updating the database',
+            alert: true});
           const err = new Error(`Layer '${name}' NOT saved`);
           err.name = 'Database Error';
           reject(err);
@@ -208,7 +214,9 @@ class Branch {
           resolve();
         })
         .catch(() => {
-          this.viewer.setMessage('PB with updating the database', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'PB with updating the database',
+            alert: true});
           const err = new Error(`Vector '${name}' (id: ${id}) NOT deleted`);
           err.name = 'Database Error';
           reject(err);

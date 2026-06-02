@@ -78,6 +78,18 @@ class Menu extends dat.GUI {
         this.removeLayerGUI(layerName);
       });
     });
+    this.view.addEventListener('messageChanged', (event) => {
+      const divMessage = document.getElementById('messageDiv');
+      divMessage.textContent = event.msg;
+      divMessage.style.visibility = 'visible';
+      divMessage.style.color = 'black';
+      if (event.alert) {
+        divMessage.style.color = '#9C2C17';
+      }
+      if (event.msg === '' || !(event.msg)) {
+        divMessage.style.visibility = 'hidden';
+      }
+    });
   }
 
   show(controllerName) {
@@ -194,7 +206,8 @@ class Menu extends dat.GUI {
             this.view.removeVectorLayer(layer.id);
             this.removeLayerGUI(layer.id);
           } else {
-            this.viewer.setMessage('Couche en edition');
+            this.viewer.view.dispatchEvent({type: 'messageChanged',
+              msg: 'Couche en edition'});
           }
         });
     }

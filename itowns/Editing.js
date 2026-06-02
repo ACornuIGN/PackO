@@ -105,7 +105,8 @@ class Editing {
       console.log('pas de polygone');
       return;
     }
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+      msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
 
     const saisieTypeStr = Object.keys(saisie)[this.saisie.type];
@@ -153,11 +154,13 @@ class Editing {
     this.api.postPatch(this.branch.active.id, JSON.stringify(geojson))
       .then(() => {
         this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
-        this.viewer.setMessage();
+        this.viewer.view.dispatchEvent({type: 'messageChanged'});
       })
       .catch((error) => {
         console.log(error);
-        this.viewer.setMessage('Erreur post patch', true);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Erreur post patch',
+            alert: true});
         this.viewer.view.dispatchEvent({
           type: 'error',
           error,
@@ -190,7 +193,9 @@ class Editing {
       this.viewer.refresh([this.branch.alert.layerName]);
       this.alertFC.features[0].geometries[this.featureIndex].properties[variable] = value;
     } else {
-      this.viewer.setMessage('PB with validate', true);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+        msg: 'PB with validate',
+        alert: true});
     }
   }
 
@@ -310,7 +315,7 @@ class Editing {
       if (this.currentStatus === status.ADDREMARK) {
         this.menu.getController('addRemark').setBackgroundColorTo('');
       }
-      this.viewer.setMessage();
+      this.viewer.view.dispatchEvent({type: 'messageChanged'});
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
     }
@@ -318,14 +323,20 @@ class Editing {
       if (e.key === 'Shift') {
         if (this.currentPolygon) {
           if (this.branch.active.name === 'orig') {
-            this.viewer.setMessage('Changer de branche pour continuer', true);
+            this.viewer.view.dispatchEvent({type: 'messageChanged',
+              msg: 'Changer de branche pour continuer',
+              alert: true});
           } else if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-            this.viewer.setMessage('Zoom non valide pour continuer', true);
+            this.viewer.view.dispatchEvent({type: 'messageChanged',
+              msg: 'Zoom non valide pour continuer',
+              alert: true});
           } else if (this.nbVertices < 3) {
-            this.viewer.setMessage('Pas assez de points');
+            this.viewer.view.dispatchEvent({type: 'messageChanged',
+              msg: 'Pas assez de points'});
           } else {
             this.currentStatus = status.ENDING;
-            this.viewer.setMessage('Cliquer pour valider la saisie');
+            this.viewer.view.dispatchEvent({type: 'messageChanged',
+              msg: 'Cliquer pour valider la saisie'});
             this.view.controls.setCursor('default', 'progress');
 
             const vertices = this.currentPolygon.geometry.attributes.position;
@@ -358,7 +369,8 @@ class Editing {
     console.log(e.key, ' up');
     if (e.key === 'Shift') {
       if (this.currentStatus === status.ENDING || this.currentStatus === status.SAISIE) {
-        this.viewer.setMessage('Maj pour terminer');
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Maj pour terminer'});
         if (this.currentPolygon && (this.nbVertices > 0)) {
           // on remet le dernier sommet sur la position de la souris
 
@@ -379,7 +391,7 @@ class Editing {
   }
 
   click(e) {
-    this.viewer.setMessage();
+    this.viewer.view.dispatchEvent({type: 'messageChanged'});
     if (this.currentStatus === status.WAITING) return;
     const mousePosition = this.pickPoint(e);
     console.log('Click: ', mousePosition.x, mousePosition.y);
@@ -390,19 +402,22 @@ class Editing {
         break;
       }
       case status.SELECT: {
-        this.viewer.setMessage('calcul en cours');
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'calcul en cours'});
         this.view.controls.setCursor('default', 'wait');
         this.currentStatus = status.WAITING;
         // on selectionne une Opi
         this.api.getGraph(this.branch.active.id, mousePosition)
           .then((opi) => {
             if (this.opi1Name !== 'none' && ([this.opi1Name, this.opi2Name].includes(opi.opiName))) {
-              this.viewer.setMessage('Même opi !!!', true);
+              this.viewer.view.dispatchEvent({type: 'messageChanged',
+                msg: 'Même opi !!!',
+                alert: true});
               this.view.controls.setCursor('default', 'crosshair');
               this.currentStatus = status.SELECT;
               return;
             }
-            this.viewer.setMessage();
+            this.viewer.view.dispatchEvent({type: 'messageChanged'});
             this.view.controls.setCursor('default', 'auto');
             this.currentStatus = status.RAS;
             this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
@@ -425,11 +440,15 @@ class Editing {
           })
           .catch((error) => {
             if (error.name === 'Erreur Utilisateur') {
-              this.viewer.setMessage('en dehors de la zone', true);
+              this.viewer.view.dispatchEvent({type: 'messageChanged',
+                msg: 'en dehors de la zone',
+                alert: true});
               this.view.controls.setCursor('default', 'crosshair');
               this.currentStatus = status.SELECT;
             } else {
-              this.viewer.setMessage(`Opi ${this.currentOpi}: PB de BdD`, true);
+              this.viewer.view.dispatchEvent({type: 'messageChanged',
+                msg: `Opi ${this.currentOpi}: PB de BdD`,
+                alert: true});
               this.view.controls.setCursor('default', 'auto');
               this.currentStatus = status.RAS;
               this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
@@ -443,12 +462,17 @@ class Editing {
       }
       case status.SAISIE: {
         if (this.branch.active.name === 'orig') {
-          this.viewer.setMessage('Changer de branche pour continuer', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Changer de branche pour continuer',
+            alert: true});
         } else if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-          this.viewer.setMessage('Zoom non valide pour continuer', true);
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Zoom non valide pour continuer',
+            alert: true});
         } else {
           // Cas ou l'on est en train de saisir un polygon : on ajoute un point
-          this.viewer.setMessage('Maj pour terminer');
+          this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Maj pour terminer'});
 
           // Si c'est le premier point, on defini une position de reference (pb de précision)
           if (this.nbVertices === 0) {
@@ -485,11 +509,14 @@ class Editing {
 
   select(id) {
     if (this.currentStatus === status.SELECT && this.currentOpi !== id) {
-      this.viewer.setMessage(`Opi ${this.currentOpi} non encore choisie`, true);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+        msg: `Opi ${this.currentOpi} non encore choisie`,
+        alert: true});
     }
     if (this.currentStatus !== status.RAS) return;
     console.log('"select": En attente de sélection');
-    this.viewer.setMessage(`choisir l'Opi ${id}`);
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+      msg: `choisir l'Opi ${id}`});
     this.view.controls.setCursor('default', 'crosshair');
     this.currentStatus = status.SELECT;
     this.currentOpi = id;
@@ -499,27 +526,36 @@ class Editing {
   saisie(type) {
     if (this.currentStatus === status.WAITING) return;
     if (this.currentStatus === status.SELECT) {
-      this.viewer.setMessage(`Sélection Opi ${this.currentOpi} en cours`);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+        msg: `Sélection Opi ${this.currentOpi} en cours`});
       return;
     }
     if (this.currentPolygon) {
-      this.viewer.setMessage('saisie déjà en cours', true);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+        msg: 'saisie déjà en cours',
+        alert: true});
       // saisie deja en cours
       return;
     }
 
     if (saisie[type] === saisie.Polygon) {
       if (this.opi1Name === 'none') {
-        this.viewer.setMessage('pas d\'Opi sélectionnée', true);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+          msg: 'pas d\'Opi sélectionnée',
+          alert: true});
         return;
       }
       if (this.opi2Name !== 'none') {
-        this.viewer.setMessage('2 Opi sélectionnées !');
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+          msg: '2 Opi sélectionnées !',
+          alert: true});
         return;
       }
     } else if (saisie[type] === saisie.LineString) {
       if (this.opi1Name === 'none' || this.opi2Name === 'none') {
-        this.viewer.setMessage('Sélectionnez 2 Opi', true);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+          msg: 'Sélectionnez 2 Opi',
+          alert: true});
         return;
       }
     }
@@ -527,7 +563,8 @@ class Editing {
     this.saisie.type = saisie[type];
     this.saisie.color = saisieColor[type];
     console.log(`Saisie d'un.e ${type}`);
-    this.viewer.setMessage(`Saisie d'un.e ${type}`);
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+      msg: `Saisie d'un.e ${type}`});
     this.view.controls.setCursor('default', 'crosshair');
     this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
     this.menu.getController(type).setBackgroundColorTo(this.saisie.color);
@@ -555,12 +592,15 @@ class Editing {
   undo() {
     if (this.currentStatus !== status.RAS) return;
     if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-      this.viewer.setMessage('Zoom non valide pour annuler', true);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Zoom non valide pour annuler',
+            alert: true});
       return;
     }
     // this.cancelcurrentPolygon();
     console.log('undo');
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -569,14 +609,15 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.setMessage();
+      this.viewer.view.dispatchEvent({type: 'messageChanged'});
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
       }
       res.text().then((msg) => {
-        this.viewer.setMessage(msg);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: msg});
       });
     });
   }
@@ -584,11 +625,14 @@ class Editing {
   redo() {
     if (this.currentStatus !== status.RAS) return;
     if (this.viewer.dezoom > this.viewer.maxGraphDezoom) {
-      this.viewer.setMessage('Zoom non valide pour refaire', true);
+      this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'Zoom non valide pour refaire',
+            alert: true});
       return;
     }
     console.log('redo');
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
     fetch(`${this.api.url}/${this.branch.active.id}/patch/redo?`,
@@ -596,14 +640,15 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.setMessage();
+      this.viewer.view.dispatchEvent({type: 'messageChanged'});
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.viewer.refresh(this.branch.layers);
       }
       res.text().then((msg) => {
-        this.viewer.setMessage(msg);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: msg});
       });
     });
   }
@@ -613,7 +658,8 @@ class Editing {
     const ok = window.confirm('Voulez-vous effacer toutes les modifications?');
     if (!ok) return;
     console.log('clear');
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -622,14 +668,15 @@ class Editing {
         method: 'PUT',
       }).then((res) => {
       // this.cancelcurrentPolygon();
-      this.viewer.setMessage();
+      this.viewer.view.dispatchEvent({type: 'messageChanged'});
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
       }
       res.text().then((msg) => {
-        this.viewer.setMessage(msg);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+          msg: msg});
       });
     });
   }
@@ -638,14 +685,16 @@ class Editing {
   addRemark() {
     if (this.currentStatus !== status.RAS) return;
     console.log("saisie d'une remarque");
-    this.viewer.setMessage("saisie d'une remarque");
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+      msg: 'saisie d\'une remarque'});
     this.view.controls.setCursor('default', 'crosshair');
     this.currentStatus = status.ADDREMARK;
     this.menu.getController('addRemark').setBackgroundColorTo(actvBtnColor);
   }
 
   postRemark(mousePosition, remark) {
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+      msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -653,7 +702,7 @@ class Editing {
     const remarksLayerId = this.view.getLayerById('Remarques').vectorId;
     this.api.putRemark(remarksLayerId, mousePosition, remark)
       .then(() => {
-        this.viewer.setMessage();
+        this.viewer.view.dispatchEvent({type: 'messageChanged'});
         this.view.controls.setCursor('default', 'auto');
         this.currentStatus = status.RAS;
         this.menu.getController('addRemark').setBackgroundColorTo('');
@@ -665,7 +714,9 @@ class Editing {
         });
       })
       .catch((error) => {
-        this.viewer.setMessage('remark: error during save', true);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'remark: error during save',
+            alert: true});
         this.viewer.view.dispatchEvent({
           type: 'error',
           msg: error,
@@ -676,7 +727,8 @@ class Editing {
   delRemark() {
     if (this.currentStatus !== status.RAS) return;
     console.log("suppression d'une remarque");
-    this.viewer.setMessage('calcul en cours');
+    this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'calcul en cours'});
     this.view.controls.setCursor('default', 'wait');
     this.currentStatus = status.WAITING;
 
@@ -688,7 +740,7 @@ class Editing {
     const remarkId = featureSelectedGeom.properties.id;
     this.api.delRemark(remarksLayerId, remarkId)
       .then(() => {
-        this.viewer.setMessage();
+        this.viewer.view.dispatchEvent({type: 'messageChanged'});
         this.view.controls.setCursor('default', 'auto');
         this.currentStatus = status.RAS;
 
@@ -697,7 +749,9 @@ class Editing {
         });
       })
       .catch((error) => {
-        this.viewer.setMessage('remark: error during delete', true);
+        this.viewer.view.dispatchEvent({type: 'messageChanged',
+            msg: 'remark: error during delete',
+            alert: true});
         this.viewer.view.dispatchEvent({
           type: 'error',
           msg: error,
