@@ -412,8 +412,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
       /* eslint-enable no-param-reassign */
       slabsModified.push(patch.slab);
 
-      promises.push(gdalProcessing.processPatchAsync(patch, overviews.tileSize.width,
-        patchIsAuto));
+      promises.push(gdalProcessing.processPolygonPatchAsync(patch, overviews.tileSize.width));
     });
   }
 
