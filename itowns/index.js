@@ -206,11 +206,13 @@ async function main() {
       .name('Coordinates')
       .listen().onChange(() => {
         if (!checkCoordString(editing.coord)) {
-          viewer.view.dispatchEvent({type: 'messageChanged',
+          viewer.view.dispatchEvent({
+            type: 'messageChanged',
             msg: 'Cordonnees non valides',
-            alert: true});
+            alert: true,
+          });
         } else {
-          viewer.view.dispatchEvent({type: 'messageChanged'});
+          viewer.view.dispatchEvent({ type: 'messageChanged' });
         }
       })
       .onFinishChange(() => {
@@ -219,7 +221,7 @@ async function main() {
           viewer.centerCameraOn(coords[0], coords[1]);
         }
         editing.currentStatus = editing.STATUS.RAS;
-        viewer.view.dispatchEvent({type: 'messageChanged'});
+        viewer.view.dispatchEvent({ type: 'messageChanged' });
       })
       .domElement.addEventListener('click', () => {
         editing.currentStatus = editing.STATUS.WRITING;
@@ -238,7 +240,7 @@ async function main() {
       .domElement.parentElement.parentElement.style.display = 'none';
 
     // Message
-    viewer.view.dispatchEvent({type: 'messageChanged'});
+    viewer.view.dispatchEvent({ type: 'messageChanged' });
 
     // Couche d'alertes
     menu.add({ alertLayer: '-' }, 'alertLayer', [alert.layerName, ...branch.vectorList.map((elem) => elem.name)])
@@ -257,9 +259,11 @@ async function main() {
         if (newId >= 0 && newId < alert.nbTotal) {
           alert.changeFeature(newId, { centerOnFeature: true });
         } else {
-          viewer.view.dispatchEvent({type: 'messageChanged',
+          viewer.view.dispatchEvent({
+            type: 'messageChanged',
             msg: 'id non valide',
-            alert: true});
+            alert: true,
+          });
           alert.id = alert.featureIndex;
         }
       })

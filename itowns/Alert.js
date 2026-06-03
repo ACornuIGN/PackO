@@ -148,9 +148,11 @@ class Alert {
         .catch(() => {
           this.nbChecked -= 1;
           this.progress = `${this.nbChecked}/${this.nbTotal} (${this.nbValidated} validés)`;
-          this.viewer.view.dispatchEvent({type: 'messageChanged',
-            msg: 'PB with updating the database',
-            alert: true});
+          this.viewer.view.dispatchEvent({
+            type: 'messageChanged',
+            mesage: 'PB with updating the database',
+            alert: true,
+          });
           const err = new Error('Feature.status NOT modified');
           err.name = 'Database Error';
           // this.viewer.view.dispatchEvent({
@@ -189,9 +191,11 @@ class Alert {
   uncheck() {
     const featureSelectedGeom = this.featureCollection.features[0].geometries[this.featureIndex];
     if (featureSelectedGeom.properties.status === true) {
-      this.viewer.view.dispatchEvent({type: 'messageChanged',
-            msg: 'Déjà validée',
-            alert: true});
+      this.viewer.view.dispatchEvent({
+        type: 'messageChanged',
+        msg: 'Déjà validée',
+        alert: true,
+      });
     } else if (featureSelectedGeom.properties.status === false) {
       // this.postValue(featureSelectedGeom.properties.id, 'status', null);
       this.api.updateAlert(featureSelectedGeom.properties.id, 'status', null)
@@ -203,9 +207,11 @@ class Alert {
           this.viewer.view.refresh([this.layerName]);
         })
         .catch(() => {
-          this.viewer.view.dispatchEvent({type: 'messageChanged',
+          this.viewer.view.dispatchEvent({
+            type: 'messageChanged',
             msg: 'PB with updating the database',
-            alert: true});
+            alert: true,
+          });
           const err = new Error('Feature.status NOT modified');
           err.name = 'Database Error';
           this.viewer.view.dispatchEvent({
@@ -235,9 +241,11 @@ class Alert {
         this.viewer.view.refresh([this.layerName]);
       })
       .catch(() => {
-        this.viewer.view.dispatchEvent({type: 'messageChanged',
-            msg: 'PB with updating the database',
-            alert: true});
+        this.viewer.view.dispatchEvent({
+          type: 'messageChanged',
+          msg: 'PB with updating the database',
+          alert: true,
+        });
         const err = new Error('Feature.status NOT modified');
         err.name = 'Database Error';
         this.viewer.view.dispatchEvent({
