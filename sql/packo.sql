@@ -2,12 +2,15 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.12 (Debian 13.12-1.pgdg110+1)
--- Dumped by pg_dump version 13.12 (Debian 13.12-1.pgdg110+1)
+\restrict 5ncnfANJKQoJVfjFziFyiSoGLoJhh2MIwgb7ptncUOqTsr8FRgDjkaolKSC5dlX
+
+-- Dumped from database version 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
+-- Dumped by pg_dump version 18.4 (Ubuntu 18.4-1.pgdg24.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -43,14 +46,48 @@ CREATE TYPE public.processes_status AS ENUM (
 
 ALTER TYPE public.processes_status OWNER TO postgres;
 
+
+--
+-- Name: auto_num_blocks_and_delete_unactive(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.auto_num_blocks_and_delete_unactive() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+	DELETE FROM blocks 
+	WHERE 
+		id_branch=NEW.id_branch 
+		AND 
+		active=False;
+	NEW.num = (
+		SELECT  
+	CASE WHEN max(num) IS NULL THEN 1
+	ELSE max(num) + 1
+	END next_num
+	FROM blocks
+	WHERE 
+		id_branch=NEW.id_branch 
+		AND 
+		active=True
+	);
+	RETURN NEW;
+END;$$;
+
+
+ALTER FUNCTION public.auto_num_blocks_and_delete_unactive() OWNER TO postgres;
+
 --
 -- Name: auto_num_layers(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION public.auto_num_layers() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
-BEGIN
+    AS $$BEGIN
+    DELETE FROM blocks 
+	WHERE 
+		id_branch=NEW.id_branch 
+		AND 
+		active=False;
 	NEW.num = (
 		SELECT  
 	CASE WHEN max(num) IS NULL THEN 1
@@ -61,24 +98,18 @@ BEGIN
 		id_branch=NEW.id_branch 
 	);
 	RETURN NEW;
-END;
-$$;
+END;$$;
 
 
 ALTER FUNCTION public.auto_num_layers() OWNER TO postgres;
 
 --
--- Name: auto_num_patches_and_delete_unactive(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: auto_num_patches(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.auto_num_patches_and_delete_unactive() RETURNS trigger
+CREATE FUNCTION public.auto_num_patches() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
-	DELETE FROM patches 
-	WHERE 
-		id_branch=NEW.id_branch 
-		AND 
-		active=False;
 	NEW.num = (
 		SELECT  
 	CASE WHEN max(num) IS NULL THEN 1
@@ -86,57 +117,51 @@ CREATE FUNCTION public.auto_num_patches_and_delete_unactive() RETURNS trigger
 	END next_num
 	FROM patches
 	WHERE 
-		id_branch=NEW.id_branch 
-		AND 
-		active=True
+		id_block=NEW.id_block 
 	);
 	RETURN NEW;
 END;$$;
 
 
-ALTER FUNCTION public.auto_num_patches_and_delete_unactive() OWNER TO postgres;
+ALTER FUNCTION public.auto_num_patches() OWNER TO postgres;
 
 --
--- Name: check_before_patch_activation(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: check_before_block_activation(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.check_before_patch_activation() RETURNS trigger
+CREATE FUNCTION public.check_before_block_activation() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
-BEGIN
+    AS $$BEGIN
 	IF NEW.num > (
-		SELECT min(num) FROM patches
+		SELECT min(num) FROM blocks
 		WHERE id_branch=NEW.id_branch AND active=False)
 	THEN 
-		RAISE EXCEPTION 'patch activation impossible' USING ERRCODE='20808';
+		RAISE EXCEPTION 'block activation impossible' USING ERRCODE='20808';
 	END IF;
 	RETURN NEW;
-END;
-$$;
+END;$$;
 
 
-ALTER FUNCTION public.check_before_patch_activation() OWNER TO postgres;
+ALTER FUNCTION public.check_before_block_activation() OWNER TO postgres;
 
 --
--- Name: check_before_patch_deactivation(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: check_before_block_deactivation(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.check_before_patch_deactivation() RETURNS trigger
+CREATE FUNCTION public.check_before_block_deactivation() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
-BEGIN
+    AS $$BEGIN
 	IF NEW.num < (
-		SELECT max(num) FROM patches
+		SELECT max(num) FROM blocks
 		WHERE id_branch=NEW.id_branch AND active=True)
 	THEN 
-		RAISE EXCEPTION 'patch desactivation impossible' USING ERRCODE='20808';
+		RAISE EXCEPTION 'block desactivation impossible' USING ERRCODE='20808';
 	END IF;
 	RETURN NEW;
-END;
-$$;
+END;$$;
 
 
-ALTER FUNCTION public.check_before_patch_deactivation() OWNER TO postgres;
+ALTER FUNCTION public.check_before_block_deactivation() OWNER TO postgres;
 
 --
 -- Name: create_orig_branch(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -177,6 +202,42 @@ ALTER FUNCTION public.create_remarks_layer() OWNER TO postgres;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: blocks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.blocks (
+    id integer NOT NULL,
+    id_branch integer NOT NULL,
+    num integer NOT NULL,
+    active boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public.blocks OWNER TO postgres;
+
+--
+-- Name: block_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.block_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.block_id_seq OWNER TO postgres;
+
+--
+-- Name: block_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.block_id_seq OWNED BY public.blocks.id;
+
 
 --
 -- Name: branches; Type: TABLE; Schema: public; Owner: postgres
@@ -335,7 +396,7 @@ CREATE VIEW public.features_json AS
           GROUP BY t.id_layer) feature_json ON ((l.id = feature_json.id_layer)));
 
 
-ALTER TABLE public.features_json OWNER TO postgres;
+ALTER VIEW public.features_json OWNER TO postgres;
 
 --
 -- Name: layers_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -391,8 +452,7 @@ CREATE TABLE public.patches (
     id integer NOT NULL,
     num integer NOT NULL,
     geom public.geometry NOT NULL,
-    id_branch integer NOT NULL,
-    active boolean DEFAULT true NOT NULL,
+    id_block integer NOT NULL,
     id_opi integer NOT NULL,
     id_opisec integer,
     is_auto boolean DEFAULT false NOT NULL
@@ -515,6 +575,29 @@ INSERT INTO public.styles OVERRIDING SYSTEM VALUE VALUES (0, 'Remarques', 1, tru
 SELECT setval('public.styles_id_seq', (SELECT MAX(id) FROM public.styles));
 
 --
+-- Name: blocks id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.blocks ALTER COLUMN id SET DEFAULT nextval('public.block_id_seq'::regclass);
+
+
+--
+-- Name: blocks block_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT block_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: blocks blocks_num_id_branch_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT blocks_num_id_branch_key UNIQUE (num, id_branch);
+
+
+--
 -- Name: branches branches_name_id_cache_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -611,11 +694,11 @@ ALTER TABLE ONLY public.opi
 
 
 --
--- Name: patches patches_num_id_branch_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: patches patches_num_id_block_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.patches
-    ADD CONSTRAINT patches_num_id_branch_key UNIQUE (num, id_branch);
+    ADD CONSTRAINT patches_num_id_block_key UNIQUE (num, id_block);
 
 
 --
@@ -659,10 +742,31 @@ ALTER TABLE ONLY public.styles
 
 
 --
+-- Name: fki_blocks_id_branch_fkey; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX fki_blocks_id_branch_fkey ON public.blocks USING btree (id_branch);
+
+
+--
+-- Name: fki_patches_id_block_fkey; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX fki_patches_id_block_fkey ON public.patches USING btree (id_block);
+
+
+--
 -- Name: fki_patches_id_opisec_fkey; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX fki_patches_id_opisec_fkey ON public.patches USING btree (id_opisec);
+
+
+--
+-- Name: fki_slabs_id_patch_fkey; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX fki_slabs_id_patch_fkey ON public.slabs USING btree (id_patch);
 
 
 --
@@ -673,10 +777,17 @@ CREATE TRIGGER auto_num_layers BEFORE INSERT ON public.layers FOR EACH ROW EXECU
 
 
 --
--- Name: patches auto_num_patches_and_delete_unactive_on_insert; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: patches auto_num_blocks_and_delete_unactive_on_insert; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER auto_num_patches_and_delete_unactive_on_insert BEFORE INSERT ON public.patches FOR EACH ROW EXECUTE FUNCTION public.auto_num_patches_and_delete_unactive();
+CREATE TRIGGER auto_num_blocks_and_delete_unactive_on_insert BEFORE INSERT ON public.blocks FOR EACH ROW EXECUTE FUNCTION public.auto_num_blocks_and_delete_unactive();
+
+
+--
+-- Name: patches auto_num_patches_on_insert; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER auto_num_patches_on_insert BEFORE INSERT ON public.patches FOR EACH ROW EXECUTE FUNCTION public.auto_num_patches();
 
 
 --
@@ -694,17 +805,25 @@ CREATE TRIGGER insert_newcache AFTER INSERT ON public.caches FOR EACH ROW EXECUT
 
 
 --
--- Name: patches on_patch_activation; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: patches on_block_activation; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER on_patch_activation BEFORE UPDATE OF active ON public.patches FOR EACH ROW WHEN ((new.active = true)) EXECUTE FUNCTION public.check_before_patch_activation();
+CREATE TRIGGER on_block_activation BEFORE UPDATE OF active ON public.blocks FOR EACH ROW WHEN ((new.active = true)) EXECUTE FUNCTION public.check_before_block_activation();
 
 
 --
--- Name: patches on_patch_deactivation; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: patches on_block_deactivation; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER on_patch_deactivation BEFORE UPDATE OF active ON public.patches FOR EACH ROW WHEN ((new.active = false)) EXECUTE FUNCTION public.check_before_patch_deactivation();
+CREATE TRIGGER on_block_deactivation BEFORE UPDATE OF active ON public.blocks FOR EACH ROW WHEN ((new.active = false)) EXECUTE FUNCTION public.check_before_block_deactivation();
+
+
+--
+-- Name: blocks blocks_id_branch_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT blocks_id_branch_fkey FOREIGN KEY (id_branch) REFERENCES public.branches(id) ON DELETE CASCADE NOT VALID;
 
 
 --
@@ -756,11 +875,11 @@ ALTER TABLE ONLY public.opi
 
 
 --
--- Name: patches patches_id_branch_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: patches patches_id_block_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.patches
-    ADD CONSTRAINT patches_id_branch_fkey FOREIGN KEY (id_branch) REFERENCES public.branches(id) ON DELETE CASCADE NOT VALID;
+    ADD CONSTRAINT patches_id_block_fkey FOREIGN KEY (id_block) REFERENCES public.blocks(id) ON DELETE CASCADE NOT VALID;
 
 
 --
@@ -790,3 +909,6 @@ ALTER TABLE ONLY public.slabs
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict 5ncnfANJKQoJVfjFziFyiSoGLoJhh2MIwgb7ptncUOqTsr8FRgDjkaolKSC5dlX
+
