@@ -198,7 +198,8 @@ async function getBand(ds) {
   }));
 }
 
-function processPatchAsync(patch, blocSize, isAuto) {
+function processPolygonPatchAsync(patch, blocSize) {
+  // Appelée que dans le cas des saisies manuelles => Polygone
   return new Promise((res, reject) => {
     // On patch le graph
     const { mask } = patch;
@@ -209,23 +210,7 @@ function processPatchAsync(patch, blocSize, isAuto) {
     const urlGraph = patch.withOrig ? patch.urlGraphOrig : patch.urlGraph;
     const urlOrthoRgb = patch.withOrig ? patch.urlOrthoRgbOrig : patch.urlOrthoRgb;
     const urlOrthoIr = urlOrthoRgb.replace('.', 'i.');
-    const { urlOpiRefRgb, urlOpiSecRgb } = patch;
-    let urlOpiRefIr = urlOpiRefRgb;
-    const dnameRef = path.dirname(urlOpiRefIr);
-    let fnameRef = path.basename(urlOpiRefIr);
-    if (fnameRef.includes('_ix') === false) {
-      fnameRef = fnameRef.includes('x') ? fnameRef.replace('x', '_ix') : fnameRef.replace('.', 'i.');
-      urlOpiRefIr = path.join(dnameRef, fnameRef);
-    }
-    let urlOpiSecIr = urlOpiSecRgb;
-    if (isAuto) {
-      const dnameSec = path.dirname(urlOpiSecIr);
-      let fnameSec = path.basename(urlOpiSecIr);
-      if (fnameSec.includes('_ix') === false) {
-        fnameSec = fnameSec.includes('x') ? fnameSec.replace('x', '_ix') : fnameSec.replace('.', 'i.');
-        urlOpiSecIr = path.join(dnameSec, fnameSec);
-      }
-    }
+    const { urlOpiRefRgb, urlOpiRefIr } = patch;
 
     debug('chargement...');
     Promise.all([
@@ -234,19 +219,14 @@ function processPatchAsync(patch, blocSize, isAuto) {
       patch.withIr ? gdal.openAsync(urlOpiRefIr).then((ds) => getBand(ds)) : null,
       patch.withRgb ? gdal.openAsync(urlOrthoRgb).then((ds) => getBands(ds)) : null,
       patch.withIr ? gdal.openAsync(urlOrthoIr).then((ds) => getBand(ds)) : null,
-      (isAuto && patch.withRgb) ? gdal.openAsync(urlOpiSecRgb).then((ds) => getBands(ds)) : null,
-      (isAuto && patch.withIr) ? gdal.openAsync(urlOpiSecIr).then((ds) => getBand(ds)) : null,
     ]).then(async (images) => {
       debug('... fin chargement');
       debug('application du patch...');
-      // TODO: opi sec
       const graph = images[0];
       const opiRefRgb = images[1];
       const opiRefIr = images[2];
       const orthoRgb = images[3];
       const orthoIr = images[4];
-      const opiSecRgb = (isAuto ? images[5] : 'none');
-      const opiSecIr = (isAuto ? images[6] : 'none');
 
       graph.bands[0].forEach((_element, index) => {
         /* eslint-disable no-param-reassign */
@@ -325,14 +305,6 @@ function processPatchAsync(patch, blocSize, isAuto) {
       if (opiRefIr) {
         opiRefIr.ds.close();
       }
-      if (isAuto) {
-        if (opiSecRgb) {
-          opiSecRgb.ds.close();
-        }
-        if (opiSecIr) {
-          opiSecIr.ds.close();
-        }
-      }
 
       Promise.all([
         gdal.drivers.get('COG').createCopyAsync(patch.urlGraphOutput, graphMem, {
@@ -364,4 +336,4 @@ function processPatchAsync(patch, blocSize, isAuto) {
 exports.getTileEncoded = getTileEncoded;
 exports.getColor = getColor;
 exports.getDefaultEncoded = getDefaultEncoded;
-exports.processPatchAsync = processPatchAsync;
+exports.processPolygonPatchAsync = processPolygonPatchAsync;
