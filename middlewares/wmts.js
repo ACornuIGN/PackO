@@ -255,7 +255,7 @@ function wmts(req, _res, next) {
           bands = [0, 1, 2];
           break;
         case 'IRC':
-          bands = [3, 1, 2];
+          bands = [3, 0, 1];
           break;
         case 'IR':
           bands = [3, 3, 3];
