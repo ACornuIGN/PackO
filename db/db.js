@@ -206,17 +206,17 @@ async function getOPIFromColor(pgClient, idBranch, color) {
   return results.rows[0];
 }
 
-async function getOPIFromName(pgClient, idBranch, name) {
-  debug(`    ~~getOPIFromName (name: ${name})`);
+async function getOPIFromNames(pgClient, idBranch, names) {
+  debug(`    ~~getOPIFromNames (names: ${names})`);
   const results = await pgClient.query(
-    'SELECT o.name, to_char(o.date,\'YYYY-mm-dd\') as date, o.time_ut, o.color, o.id, o.with_rgb, o.with_ir FROM opi o, branches b WHERE b.id_cache = o.id_cache AND b.id = $1 AND o.name=$2',
-    [idBranch, name],
+    'SELECT o.name, to_char(o.date,\'YYYY-mm-dd\') as date, o.time_ut, o.color, o.id, o.with_rgb, o.with_ir FROM opi o, branches b WHERE b.id_cache = o.id_cache AND b.id = $1 AND o.name = ANY($2)',
+    [idBranch, names],
   );
   debug(results.rows);
-  if (results.rowCount !== 1) {
-    throw new Error(`on a trouvé ${results.rowCount} opi pour le nom '${name}'`);
+  if (results.rowCount !== names.length) {
+    throw new Error(`on a trouvé ${results.rowCount} opi pour ${names.length} noms demandés`);
   }
-  return results.rows[0];
+  return results.rows;
 }
 
 // async function getOPIFromId(pgClient, idOpi) {
@@ -241,13 +241,13 @@ async function getCacheCrsFromIdBranch(pgClient, idBranch) {
   return results.rows[0];
 }
 
-async function insertPatch(pgClient, idBranch, geometry, opiRefId, opiSecId, isAuto) {
+async function insertPatch(pgClient, idBranch, geometry, idOpi, isAuto) {
   debug(`    ~~insertPatch (idBranch: ${idBranch})`);
   const sql = format('INSERT INTO patches (geom, id_branch, id_opi, id_opisec, is_auto) VALUES (ST_GeomFromGeoJSON(%L), %L) RETURNING id as id_patch, num',
     JSON.stringify(geometry),
     [idBranch,
-      opiRefId,
-      isAuto ? opiSecId : null,
+      idOpi.ref,
+      isAuto ? idOpi.sec : null,
       isAuto]);
   debug(sql);
 
@@ -319,7 +319,7 @@ async function insertSlabs(pgClient, idPatch, slabs) {
     values.push([idPatch, slab.x, slab.y, slab.z]);
   });
 
-  const sql = format('INSERT INTO slabs (id_patch, x, y , z) values (%s)', values.join('),('));
+  const sql = format('INSERT INTO slabs (id_patch, x, y, z) values (%s)', values.join('),('));
   debug(sql);
 
   const results = await pgClient.query(
@@ -604,7 +604,7 @@ module.exports = {
   getActivePatches,
   getUnactivePatches,
   getOPIFromColor,
-  getOPIFromName,
+  getOPIFromNames,
   getCrsFromIdBranch: getCacheCrsFromIdBranch,
   insertPatch,
   deactivatePatch,
