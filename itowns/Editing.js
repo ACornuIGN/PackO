@@ -152,7 +152,8 @@ class Editing {
     // On post le geojson sur l'API
     this.api.postPatch(this.branch.active.id, JSON.stringify(geojson))
       .then(() => {
-        this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
+        const cacheBusting = true;
+        this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches'], cacheBusting);
         this.viewer.message = '';
       })
       .catch((error) => {
@@ -573,7 +574,8 @@ class Editing {
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
-        this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
+        const cacheBusting = true;
+        this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches'], cacheBusting);
       }
       res.text().then((msg) => {
         this.viewer.message = msg;
@@ -600,7 +602,8 @@ class Editing {
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
-        this.viewer.refresh(this.branch.layers);
+        const cacheBusting = true;
+        this.viewer.refresh(this.branch.layers, cacheBusting);
       }
       res.text().then((msg) => {
         this.viewer.message = msg;

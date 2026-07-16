@@ -298,7 +298,7 @@ class Viewer {
     });
   }
 
-  refresh(layers) {
+  refresh(layers, cacheBusting = false) {
     const layerList = layers instanceof Array ? layers : [layers];
     const layerNames = [];
     layerList.forEach((layer) => {
@@ -339,6 +339,10 @@ class Viewer {
             }
             changeLayerStyle(config, layer.idSelected, this.oldStyle[layerName]);
           }
+        } else if (cacheBusting) {
+          // Force cache-busting pour les couches WMTS raster (Ortho, Graph, ...)
+          // by adding a new parameter
+          config.source.url = `${layer.source.url.replace(/[&?]t=\d+/, '')}&t=${Date.now()}`;
         }
         this.view.removeLayer(layerName);
       } else {
