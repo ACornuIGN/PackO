@@ -267,6 +267,9 @@ function processPolygonPatchAsync(patch, blocSize) {
         graph.size.x, graph.size.y, graph.bands[1]);
       graphMem.bands.get(3).pixels.write(0, 0,
         graph.size.x, graph.size.y, graph.bands[2]);
+      graphMem.bands.get(1).colorInterpretation = gdal.GCI_RedBand;
+      graphMem.bands.get(2).colorInterpretation = gdal.GCI_GreenBand;
+      graphMem.bands.get(3).colorInterpretation = gdal.GCI_BlueBand;
       const orthoRgbMem = orthoRgb ? gdal.open('orthoRgb', 'w', 'MEM',
         orthoRgb.size.x, orthoRgb.size.y, 3) : null;
       if (orthoRgbMem) {
