@@ -189,8 +189,10 @@ async function rebase(req, res, next) {
       const patchInserted = await db.insertPatch(req.client,
         idNewBranch,
         feature.geometry,
-        feature.properties.id_opi,
-        feature.properties.id_opisec,
+        {
+          ref: feature.properties.id_opi,
+          sec: feature.properties.id_opisec,
+        },
         feature.properties.is_auto);
       const idNewPatch = patchInserted.id_patch;
 
