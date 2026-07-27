@@ -346,29 +346,51 @@ paths:
           schema:
             type: integer
       requestBody:
-        description: polygone à patcher (geoJson)
+        description: Polygone ou polyligne à patcher (GeoJSON); seulement la première feature est considérée. Exemples pris sur le cache cache_test_RGBIR.
         required: true
         content:
           application/json:
-              schema:
-                type: object
-                properties:
-                  type:
-                    type: string
-                    enum:
-                      - FeatureCollection
-                  crs:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  value: FeatureCollection
+                crs:
+                  $ref: '#/components/schemas/crs'
+                features:
+                  type: array
+                  items:
                     type: object
-                    example:
-                      {
-                        "type":"name",
-                        "properties":{
-                          "name":"urn:ogc:def:crs:EPSG::2154"}}
-
-                  features:
-                    type: object
-                    example:
-                      [ { type: 'Feature', properties: { color: [254, 175, 143], opiName: '19FD5606Ax00020_16371' }, geometry: { type: 'Polygon', coordinates: [[[230748, 6759653], [230746, 6759653], [230746, 6759651], [230748, 6759651], [230748, 6759653]]] } } ]
+                    properties:
+                      properties:
+                        type: object
+                        properties:
+                          is_auto:
+                            type: boolean
+                          color:
+                            type: array
+                            items:
+                              type: integer
+                          opiName:
+                            type: string
+                          colorSec:
+                            type:
+                              - nullable
+                              - array
+                            items:
+                              type: integer
+                          opiNameSec:
+                            type:
+                              - nullable
+                              - string
+                      geometry:
+                        $ref: '#/components/schemas/geometry'
+            examples:
+              exemple_polygon:
+                $ref: '#/components/examples/featureCollectionPolygon'
+              exemple_linestring:
+                $ref: '#/components/examples/featureCollectionLinestring'
 
       responses:
         '200':
@@ -504,20 +526,16 @@ paths:
                     properties:
                       type:
                         type: string
-                        enum:
-                          - FeatureCollection
+                        value: FeatureCollection
                       crs:
                         type: object
                         example:
-                          {
-                            "type":"name",
-                            "properties":{
-                              "name":"urn:ogc:def:crs:EPSG::2154"}}
+                          $ref: '#/components/examples/nameCrs'
 
                       features:
                         type: object
                         example:
-                          [ { type: 'Feature', properties: { color: [254, 175, 143], opiName: '19FD5606Ax00020_16371' }, geometry: { type: 'Polygon', coordinates: [[[230748, 6759653], [230746, 6759653], [230746, 6759651], [230748, 6759651], [230748, 6759653]]] } } ]
+                          $ref: '#/components/examples/featurePolygon'
 
       responses:
         '200':
@@ -699,8 +717,7 @@ paths:
           schema:
             type: string
 #            pattern: '^\d+(.\d+)*$'
-            enum:
-              - 1.0.0
+            value: 1.0.0
         - in: query
           name: LAYER
           description: required if GetTile or GetFeatureInfo
@@ -808,8 +825,7 @@ paths:
           required: true
           schema:
             type: string
-            enum:
-              - overviews
+            value: overviews
         - in: query
           name: cachePath
           required: true
@@ -942,3 +958,147 @@ paths:
         '200':
           description: OK
 
+################################
+#          COMPONENTS          #
+################################
+components:
+
+## EXAMPLES
+  examples:
+
+    nameCrs:
+      type: name
+      properties:
+        name: "urn:ogc:def:crs:EPSG::2154"
+
+    featurePolygon:
+      - type: Feature
+        properties:
+          is_auto: false
+          color: [242,168,55]
+          opiName: "19FD5606Ax00020_16371"
+          colorSec: nullable
+          opiNameSec: nullable
+        geometry:
+          type: Polygon
+          coordinates: [[[230747.32, 6759652.52],[230746.84, 6759651.79],[230747.77, 6759651.10],[230748.60, 6759652.22],[230747.32, 6759652.52]]]
+
+    featureCollectionPolygon:
+      summary: Patch Polygone
+      value:
+        type: FeatureCollection
+        crs:
+          type: name
+          properties:
+            name: "urn:ogc:def:crs:EPSG::2154"
+        features:
+        - type: Feature
+          properties:
+            is_auto: false
+            color: [242,168,55]
+            opiName: "19FD5606Ax00020_16371"
+            colorSec: nullable
+            opiNameSec: nullable
+          geometry:
+            type: Polygon
+            coordinates: [[[230747.32, 6759652.52],[230746.84, 6759651.79],[230747.77, 6759651.10],[230748.60, 6759652.22],[230747.32, 6759652.52]]]
+
+
+    featureCollectionLinestring:
+      summary: Patch Polyligne
+      value:
+        type: FeatureCollection
+        crs:
+          type: name
+          properties:
+            name: "urn:ogc:def:crs:EPSG::2154"
+        features:
+        - type: Feature
+          properties:
+            is_auto: true
+            color: [55,220,19]
+            opiName: "19FD5606Ax00020_16372"
+            colorSec: [242,168,55]
+            opiNameSec: "19FD5606Ax00020_16371"
+          geometry:
+            type: LineString
+            coordinates: [[230750.69, 6759646.07],[230751.39, 6759645.84],[230751.92,6759645.10],[230751.89, 6759644.37],[230751.35, 6759643.90]]
+
+## SCHEMA
+  schemas:
+
+    crs:
+      type: object
+      oneOf:
+        - title: Name
+          properties:
+            type:
+              type: string
+              value: name
+            properties:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "urn:ogc:def:crs:EPSG::2154"
+              required: [name]
+          required: [type, properties]
+          example:
+            type: "name"
+            properties:
+              name: "urn:ogc:def:crs:EPSG::2154"
+        - title: CRS EPSG
+          properties:
+            type:
+              type: string
+              value: EPSG
+            properties:
+              type: object
+              properties:
+                code:
+                  type: integer
+                  example: 2154
+              required: [code]
+          required: [type, properties]
+          example:
+            type: "EPSG"
+            properties:
+              code: 2154
+
+    geometry:
+      type: object
+      oneOf:
+        - title: Polygon
+          properties:
+            type:
+              type: string
+              value: Polygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 4
+          required: [type, coordinates]
+          example:
+            type: "Polygon"
+            coordinates: [[[0.0, 1.0], [2.0, 3.0], [4.0, 5.0], [0.0, 1.0]]]
+        - title: LineString
+          properties:
+            type:
+              type: string
+              value: LineString
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: number
+                minItems: 2
+          required: [type, coordinates]
+          example:
+            type: "LineString"
+            coordinates: [[0.0, 1.0], [2.0, 3.0], [4.0, 5.0]]
