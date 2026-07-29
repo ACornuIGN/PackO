@@ -606,10 +606,10 @@ class Editing {
 
     this.saisie.type = saisie[type];
     this.saisie.color = saisieColor[type];
-    console.log(`Saisie d'un.e ${type}`);
+    console.log(`Saisie ${type}`);
     this.viewer.view.dispatchEvent({
       type: 'messageChanged',
-      msg: `Saisie d'un.e ${type}`,
+      msg: `Saisie ${type}`,
     });
     this.view.controls.setCursor('default', 'crosshair');
     this.menu.getController(`select${this.currentOpi}`).setBackgroundColorTo('');
