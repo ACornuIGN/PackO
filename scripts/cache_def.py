@@ -463,6 +463,9 @@ def create_ortho_and_graph_1arg(arg):
                                                    "COMPRESS=LZW",
                                                    "RESAMPLING=NEAREST",
                                                    "PREDICTOR=YES"])
+        dst_graph.GetRasterBand(1).SetColorInterpretation(gdal.GCI_RedBand)
+        dst_graph.GetRasterBand(2).SetColorInterpretation(gdal.GCI_GreenBand)
+        dst_graph.GetRasterBand(3).SetColorInterpretation(gdal.GCI_BlueBand)
 
         dst_graph = None  # noqa: F841
         # pylint: enable=unused-variable
