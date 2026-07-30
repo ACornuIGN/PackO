@@ -181,11 +181,9 @@ async function rebase(req, res, next) {
       });
     });
     // on ajoute les patchs dans la BD sur cette nouvelle branche
-    /* eslint-disable-next-line */
     for (const feature of patches.features) {
       // on insert ce patch dans les MTD de la branche
       debug(feature.properties);
-      /* eslint-disable-next-line */
       const patchInserted = await db.insertPatch(req.client,
         idNewBranch,
         feature.geometry,
@@ -196,15 +194,9 @@ async function rebase(req, res, next) {
         feature.properties.is_auto);
       const idNewPatch = patchInserted.id_patch;
 
-      const slabs = [];
-
-      /* eslint-disable-next-line */
-      for (const s of feature.properties.slabs) {
-        slabs.push({ x: s[0], y: s[1], z: s[2] });
-      }
+      const slabs = feature.properties.slabs.map((s) => ({ x: s[0], y: s[1], z: s[2] }));
 
       // ajouter les slabs correspondant au patch dans la table correspondante
-      /* eslint-disable-next-line */
       await db.insertSlabs(req.client, idNewPatch, slabs);
     }
   } catch (error) {
