@@ -286,7 +286,7 @@ describe('route/branch.js', () => {
               //   });
               done();
             });
-        });
+        }).timeout(9000);
       });
       describe('with patch', () => {
         describe(`add a patch on ${branchName}`, () => {
@@ -352,7 +352,7 @@ describe('route/branch.js', () => {
                 //     done();
                 //   });
               });
-          });
+          }).timeout(9000);
         });
         describe(`rebase 'orig' into ${branchName}`, () => {
           it('should succeed', (done) => {
@@ -388,7 +388,7 @@ describe('route/branch.js', () => {
               //       done();
               //     });
               });
-          });
+          }).timeout(9000);
         });
       });
     });

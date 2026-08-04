@@ -220,23 +220,24 @@ async function rebase(req, res, next) {
   await db.beginTransaction(req.client);
   // on retourne l'identifiant de la branche, son nom et l'identifiant et du processus
   req.result = { json: { name, id: idNewBranch, idProcess }, code: 200 };
-  next();
   // a partir de d'ici c'est non bloquant
   try {
     const patches = await db.getActivePatches(req.client, idBranch);
     debug('patches : ', patches);
 
     debug('>>applyPatches', patches.features);
-    patches.features.forEach(async (feature) => {
-      debug('application de ', feature);
+    // Clonage du patches pour en modifier un
+    const patchWithOneFeature = JSON.parse(JSON.stringify(patches));
+    for (const feature of patches.features) {
+      patchWithOneFeature.features = [feature];
       await patch.applyPatch(
         req.client,
         req.overviews,
         cache.path,
         idNewBranch,
-        feature,
+        patchWithOneFeature,
       );
-    });
+    }
     debug('fin de applyPatches');
 
     await db.finishProcess(req.client, 'succeed', idProcess, 'done');
@@ -245,6 +246,7 @@ async function rebase(req, res, next) {
     await db.finishProcess(req.client, 'failed', idProcess, 'done');
   }
   pgClient.close(req, res, () => {});
+  next();
 }
 
 async function getCachePath(req, _res, next) {
