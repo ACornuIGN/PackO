@@ -11,5 +11,12 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    'no-restricted-syntax': [ // supression ForOfStatement pour autorisé for...of sur des tables
+      'error',
+      'ForInStatement',
+      'LabeledStatement',
+      'WithStatement',
+    ],
+    'no-await-in-loop': 'off',
   },
 };
