@@ -455,17 +455,17 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const feature = geojson.features[0];
   const patchIsAuto = feature.properties.is_auto;
   debug('  ~~applyPatch: ', feature);
-  const nameOpis = [feature.properties.opiName];
-  if (patchIsAuto) {
-    nameOpis.push(feature.properties.opiNameSec);
-  }
+  const nameOpis = [feature.properties.opiName,
+    ...(patchIsAuto ? [feature.properties.opiNameSec] : [])];
 
   const infoOpis = await db.getOPIFromNames(pgClient, idBranch, nameOpis);
-  const infoOpiRef = infoOpis[0];
-  const idOpi = { ref: infoOpiRef.id };
-  if (patchIsAuto) {
-    idOpi.sec = infoOpis[1].id;
-  }
+  const infoOpiRef = infoOpis.find((opi) => opi.name === feature.properties.opiName);
+  const idOpi = {
+    ref: infoOpiRef.id,
+    ...(patchIsAuto ? {
+      sec: infoOpis.find((opi) => opi.name === feature.properties.opiNameSec).id,
+    } : {}),
+  };
 
   const patchInsertedPromise = db.insertPatch(pgClient, idBranch, feature.geometry,
     idOpi, patchIsAuto);
