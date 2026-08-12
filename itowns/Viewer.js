@@ -270,8 +270,8 @@ class Viewer {
       });
     };
 
-    this.view.refresh = function _(layers) {
-      viewer.refresh(layers);
+    this.view.refresh = function _(layers, cacheBusting = false) {
+      viewer.refresh(layers, cacheBusting);
     };
   }
 
