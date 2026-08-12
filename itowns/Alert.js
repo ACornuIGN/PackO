@@ -196,7 +196,7 @@ class Alert {
           this.progress = `${this.nbChecked}/${this.nbTotal} (${this.nbValidated} validés)`;
           featureSelectedGeom.properties.status = null;
 
-          this.viewer.view.refresh([this.layerName]);
+          this.viewer.refresh([this.layerName]);
         })
         .catch(() => {
           this.viewer.message = 'PB with updating the database';
@@ -226,7 +226,7 @@ class Alert {
         this.progress = `${this.nbChecked}/${this.nbTotal} (${this.nbValidated} validés)`;
         featureSelectedGeom.properties.status = value;
 
-        this.viewer.view.refresh([this.layerName]);
+        this.viewer.refresh([this.layerName]);
       })
       .catch(() => {
         this.viewer.message = 'PB with updating the database';

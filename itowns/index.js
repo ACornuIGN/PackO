@@ -316,7 +316,7 @@ async function main() {
       console.log(`-> A file (${ev.name}) had been dropped`);
       branch.saveLayer(ev.name, ev.data, ev.style)
         .then(() => {
-          view.refresh(branch.layers.filter((layer) => layer.name === ev.name));
+          viewer.refresh(branch.layers.filter((layer) => layer.name === ev.name));
           menu.refreshDropBox('alertLayer', ['-', ...branch.vectorList.map((elem) => elem.name)]);
         })
         .catch((error) => {

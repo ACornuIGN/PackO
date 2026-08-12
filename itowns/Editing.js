@@ -575,7 +575,7 @@ class Editing {
       this.currentStatus = status.RAS;
       if (res.status === 200) {
         const cacheBusting = true;
-        this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches'], cacheBusting);
+        this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches'], cacheBusting);
       }
       res.text().then((msg) => {
         this.viewer.message = msg;
@@ -629,7 +629,7 @@ class Editing {
       this.view.controls.setCursor('default', 'auto');
       this.currentStatus = status.RAS;
       if (res.status === 200) {
-        this.view.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
+        this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches']);
       }
       res.text().then((msg) => {
         this.viewer.message = msg;
