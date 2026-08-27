@@ -251,8 +251,10 @@ function ozCppExe(patches, outputDir, geojsonPath) {
       arrArgsOc.push(patch.withOrig ? patch.urlOrthoIrOrig : patch.urlOrthoIr);
     }
   });
-  const arrArgs = [...arrArgsR, ...arrArgsRc, ...arrArgsS, ...arrArgsSc,
-    ...arrArgsG, ...arrArgsO, ...arrArgsOc, '-p', geojsonPath];
+  const arrArgs = [...arrArgsR, ...(arrArgsRc.length === 1 ? [] : arrArgsRc),
+    ...arrArgsS, ...(arrArgsSc.length === 1 ? [] : arrArgsSc),
+    ...arrArgsG, ...arrArgsO, ...(arrArgsOc.length === 1 ? [] : arrArgsOc),
+    '-p', geojsonPath];
   const options = {
     weightDiffCost: 0.95,
     weightTransition: 10,
