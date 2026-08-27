@@ -385,7 +385,7 @@ function renameSlab(dirCache, idBranch, patch, newPatchNum) {
   }
 }
 
-function processPolygonPatch(slabs, feature, overviews, infoOpi, dirCache, idBranch,
+function processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache, idBranch,
   patchInserted) {
   debug('  ~~processPolygonPatch');
   // Pour chaque dalle intersectant le polygone, crée le patch GDAL et renomme les fichiers.
@@ -397,8 +397,8 @@ function processPolygonPatch(slabs, feature, overviews, infoOpi, dirCache, idBra
         colorRef: feature.properties.color,
         nameRef: feature.properties.opiName,
       },
-      infoOpi.with_rgb,
-      infoOpi.with_ir,
+      infoRgbIr.withRgb,
+      infoRgbIr.withIr,
       overviews,
       dirCache,
       idBranch);
@@ -415,7 +415,7 @@ function processPolygonPatch(slabs, feature, overviews, infoOpi, dirCache, idBra
   return Promise.all(slabPromises);
 }
 
-async function processSemiAutoPatch(slabs, feature, overviews, infoOpi, dirCache,
+async function processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
   idBranch, patchInserted, geojson) {
   debug('  ~~processSemiAutoPatch');
   const isAuto = true;
@@ -430,8 +430,8 @@ async function processSemiAutoPatch(slabs, feature, overviews, infoOpi, dirCache
       colorSec: feature.properties.colorSec,
       nameSec: feature.properties.opiNameSec,
     },
-    infoOpi.with_rgb,
-    infoOpi.with_ir,
+    infoRgbIr.withRgb,
+    infoRgbIr.withIr,
     overviews,
     dirCache,
     idBranch,
@@ -460,6 +460,7 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
 
   const infoOpis = await db.getOPIFromNames(pgClient, idBranch, nameOpis);
   const infoOpiRef = infoOpis.find((opi) => opi.name === feature.properties.opiName);
+  const infoRgbIr = { withRgb: infoOpiRef.with_rgb, withIr: infoOpiRef.with_ir };
   const idOpi = {
     ref: infoOpiRef.id,
     ...(patchIsAuto ? {
@@ -481,10 +482,10 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const patchInserted = await patchInsertedPromise;
   let patchProcessingPromise;
   if (!patchIsAuto) {
-    patchProcessingPromise = processPolygonPatch(slabs, feature, overviews, infoOpiRef, dirCache,
+    patchProcessingPromise = processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache,
       idBranch, patchInserted);
   } else {
-    patchProcessingPromise = processSemiAutoPatch(slabs, feature, overviews, infoOpiRef, dirCache,
+    patchProcessingPromise = processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
       idBranch, patchInserted, geojson);
   }
 
