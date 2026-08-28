@@ -6,7 +6,7 @@ async function writeGeojson(idBranch, idPatch, cachePath, geojson) {
   // create dir if it does not exist
   const dir = `${cachePath}/tmp_test_js`;
   try {
-    return fs.mkdirSync(dir);
+    fs.mkdirSync(dir);
   } catch (error) {
     if (error.code !== 'EEXIST') debug(error);
   }
