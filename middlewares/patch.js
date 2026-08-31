@@ -387,40 +387,50 @@ function renameSlab(dirCache, idBranch, patch, newPatchNum) {
   }
 }
 
-function processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache, idBranch,
-  patchInserted) {
+async function processPolygonPatch(pgClient, slabs, feature, overviews, infoRgbIr, dirCache,
+  idBranch, patchInserted) {
   debug('  ~~processPolygonPatch');
   // Pour chaque dalle intersectant le polygone, crée le patch GDAL et renomme les fichiers.
-  const slabPromises = slabs.map(async (slab) => {
+  const slabsProcessed = [];
+  const processPromises = [];
+  for (const slab of slabs) {
     const ring = createRingBySlab(slab, feature.geometry.coordinates, overviews);
-    if (ring.length === 0) return null;
-    let patch = await createPatch(slab,
-      {
-        colorRef: feature.properties.color,
-        nameRef: feature.properties.opiName,
-      },
-      infoRgbIr.withRgb,
-      infoRgbIr.withIr,
-      overviews,
-      dirCache,
-      idBranch);
-    // Creation des urls des données de sortie
-    const outputUrl = createUrlOutputPolygon(dirCache, idBranch, patch, patchInserted.num);
-    patch = { ...patch, ...outputUrl, mask: createMask(overviews, ring) };
-    // Process polygon patch
-    await gdalProcessing.processPolygonPatchAsync(patch, overviews.tileSize.width);
-    // Renomme les données de sortie
-    renameSlab(dirCache, idBranch, patch, patchInserted.num);
-    return slab;
-  });
-  debug('', slabPromises.length, 'patchs à appliquer.');
+    if (ring.length > 0) {
+      slabsProcessed.push(slab);
+      processPromises.push((async () => {
+        let patch = await createPatch(
+          slab,
+          {
+            colorRef: feature.properties.color,
+            nameRef: feature.properties.opiName,
+          },
+          infoRgbIr.withRgb,
+          infoRgbIr.withIr,
+          overviews,
+          dirCache,
+          idBranch,
+        );
+        // Creation des urls des données de sortie
+        const outputUrl = createUrlOutputPolygon(dirCache, idBranch, patch, patchInserted.num);
+        patch = { ...patch, ...outputUrl, mask: createMask(overviews, ring) };
+        // Process polygon patch
+        await gdalProcessing.processPolygonPatchAsync(patch, overviews.tileSize.width);
+        // Renomme les données de sortie
+        renameSlab(dirCache, idBranch, patch, patchInserted.num);
+      })());
+    }
+  }
+  const insertPatchPromise = db.insertSlabs(pgClient, patchInserted.id_patch, slabsProcessed);
+  debug('', processPromises.length, 'patchs à appliquer.');
   debug('~Promise.all');
-  return Promise.all(slabPromises);
+  await Promise.all([...processPromises, insertPatchPromise]);
+  return slabsProcessed;
 }
 
-async function processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
+async function processSemiAutoPatch(pgClient, slabs, feature, overviews, infoRgbIr, dirCache,
   idBranch, patchInserted, geojson) {
   debug('  ~~processSemiAutoPatch');
+  const insertPatchPromise = db.insertSlabs(pgClient, patchInserted.id_patch, slabs);
   const isAuto = true;
   // On écrit la saisie dans un fichier json pour le donner à OzCppExe
   const geojsonPath = await gjson.writeGeojson(idBranch, patchInserted.id_patch, dirCache,
@@ -452,6 +462,7 @@ async function processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCac
     const outputUrl = createUrlOutputSemiAuto(urlOutputData, idBranch, patch);
     renameSlab(dirCache, idBranch, { ...patch, ...outputUrl }, patchInserted.num);
   });
+  await insertPatchPromise;
   return slabs;
 }
 
@@ -484,22 +495,18 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const slabs = getSlabs(coordinates, overviews, borderMeters);
 
   const patchInserted = await patchInsertedPromise;
-  let slabsUse;
+  let slabsProcessed;
   if (!patchIsAuto) {
-    slabsUse = await processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache,
-      idBranch, patchInserted);
+    slabsProcessed = await processPolygonPatch(pgClient, slabs, feature, overviews, infoRgbIr,
+      dirCache, idBranch, patchInserted);
   } else {
-    slabsUse = await processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
-      idBranch, patchInserted, geojson);
+    slabsProcessed = await processSemiAutoPatch(pgClient, slabs, feature, overviews, infoRgbIr,
+      dirCache, idBranch, patchInserted, geojson);
   }
 
-  slabsUse = slabsUse.filter((slab) => slab !== null);
-  // ajouter les slabs correspondant au patch dans la table correspondante
-  await db.insertSlabs(pgClient, patchInserted.id_patch, slabsUse);
-
-  debug('on retourne les dalles modifiees : ', slabsUse);
+  debug('on retourne les dalles modifiees : ', slabsProcessed);
   debug('Fin de applyPatch');
-  return slabsUse;
+  return slabsProcessed;
 }
 
 function postPatch(req, _res, next) {
