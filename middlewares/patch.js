@@ -393,7 +393,7 @@ function processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache, idB
   // Pour chaque dalle intersectant le polygone, crée le patch GDAL et renomme les fichiers.
   const slabPromises = slabs.map(async (slab) => {
     const ring = createRingBySlab(slab, feature.geometry.coordinates, overviews);
-    if (ring.length === 0) return;
+    if (ring.length === 0) return null;
     let patch = await createPatch(slab,
       {
         colorRef: feature.properties.color,
@@ -411,6 +411,7 @@ function processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache, idB
     await gdalProcessing.processPolygonPatchAsync(patch, overviews.tileSize.width);
     // Renomme les données de sortie
     renameSlab(dirCache, idBranch, patch, patchInserted.num);
+    return slab;
   });
   debug('', slabPromises.length, 'patchs à appliquer.');
   debug('~Promise.all');
@@ -451,6 +452,7 @@ async function processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCac
     const outputUrl = createUrlOutputSemiAuto(urlOutputData, idBranch, patch);
     renameSlab(dirCache, idBranch, { ...patch, ...outputUrl }, patchInserted.num);
   });
+  return slabs;
 }
 
 async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
@@ -482,25 +484,22 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const slabs = getSlabs(coordinates, overviews, borderMeters);
 
   const patchInserted = await patchInsertedPromise;
-  let patchProcessingPromise;
+  let slabsUse;
   if (!patchIsAuto) {
-    patchProcessingPromise = processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache,
+    slabsUse = await processPolygonPatch(slabs, feature, overviews, infoRgbIr, dirCache,
       idBranch, patchInserted);
   } else {
-    patchProcessingPromise = processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
+    slabsUse = await processSemiAutoPatch(slabs, feature, overviews, infoRgbIr, dirCache,
       idBranch, patchInserted, geojson);
   }
 
+  slabsUse = slabsUse.filter((slab) => slab !== null);
   // ajouter les slabs correspondant au patch dans la table correspondante
-  const insertSlabsPromise = db.insertSlabs(pgClient,
-    patchInserted.id_patch,
-    slabs);
+  await db.insertSlabs(pgClient, patchInserted.id_patch, slabsUse);
 
-  debug('~~Promise.all~~');
-  await Promise.all([patchProcessingPromise, insertSlabsPromise]);
-  debug('on retourne les dalles modifiees : ', slabs);
+  debug('on retourne les dalles modifiees : ', slabsUse);
   debug('Fin de applyPatch');
-  return slabs;
+  return slabsUse;
 }
 
 function postPatch(req, _res, next) {
