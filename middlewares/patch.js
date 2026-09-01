@@ -495,14 +495,9 @@ async function applyPatch(pgClient, overviews, dirCache, idBranch, geojson) {
   const slabs = getSlabs(coordinates, overviews, borderMeters);
 
   const patchInserted = await patchInsertedPromise;
-  let slabsProcessed;
-  if (!patchIsAuto) {
-    slabsProcessed = await processPolygonPatch(pgClient, slabs, feature, overviews, infoRgbIr,
-      dirCache, idBranch, patchInserted);
-  } else {
-    slabsProcessed = await processSemiAutoPatch(pgClient, slabs, feature, overviews, infoRgbIr,
-      dirCache, idBranch, patchInserted, geojson);
-  }
+  const processPatch = patchIsAuto ? processSemiAutoPatch : processPolygonPatch;
+  const slabsProcessed = await processPatch(pgClient, slabs, feature, overviews, infoRgbIr,
+    dirCache, idBranch, patchInserted, geojson);
 
   debug('on retourne les dalles modifiees : ', slabsProcessed);
   debug('Fin de applyPatch');
