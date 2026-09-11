@@ -21,6 +21,7 @@ function setIdCache(id) {
 }
 
 const branchName = 'branchRegress';
+const branchName2 = 'branchRegress2';
 const idBranch = {};
 function setIdBranch(name, id) {
   idBranch[name] = id;
@@ -211,20 +212,18 @@ describe('route/branch.js', () => {
   describe('POST /{idBranch}/rebase', () => {
     describe('rebase non valid branches', () => {
       it('should failed', (done) => {
-        const idB = 99999;
         chai.request(app)
-          .post(`/${idB}/rebase`)
+          .post('/branches/rebase')
           .query({
             name: 'rebase',
-            idBase: 99999,
+            idBranch: [99998, 99999],
           })
           .end((err, res) => {
             should.not.exist(err);
             res.should.have.status(400);
             const resJson = JSON.parse(res.text);
-            resJson.should.be.an('array').to.have.lengthOf(2);
-            resJson[0].should.have.property('status').equal("Le paramètre 'idBase' n'est pas valide.");
-            resJson[1].should.have.property('status').equal("Le paramètre 'idBranch' n'est pas valide.");
+            resJson.should.be.an('array').to.have.lengthOf(1);
+            resJson[0].should.have.property('status').equal("Le paramètre 'idBranch' n'est pas valide.");
             done();
           });
       });
@@ -232,17 +231,17 @@ describe('route/branch.js', () => {
     describe('rebase a branch on itself', () => {
       it('should failed', (done) => {
         chai.request(app)
-          .post(`/${idBranch[branchName]}/rebase`)
+          .post('/branches/rebase')
           .query({
             name: 'rebase',
-            idBase: idBranch[branchName],
+            idBranch: [idBranch[branchName], idBranch[branchName]],
           })
           .end((err, res) => {
             should.not.exist(err);
-            res.should.have.status(406);
+            res.should.have.status(400);
             const resJson = JSON.parse(res.text);
-            resJson.should.be.an('object');
-            resJson.should.have.property('msg').equal(`Branch '${idBranch[branchName]}' rebase failed with error: impossible to rebase a branch on itself`);
+            resJson.should.be.an('array').to.have.lengthOf(1);
+            resJson[0].should.have.property('status').equal("Le paramètre 'idBranch (doublons)' n'est pas valide.");
             done();
           });
       });
@@ -256,34 +255,21 @@ describe('route/branch.js', () => {
       describe('with no patch', () => {
         it('should succeed', (done) => {
           chai.request(app)
-            .post(`/${idBranch.orig}/rebase`)
+            .post('/branches/rebase')
             .query({
               name: 'rebase',
-              idBase: idBranch[branchName],
+              idBranch: [idBranch[branchName], idBranch.orig],
             })
             .end((err, res) => {
               should.not.exist(err);
               res.should.have.status(200);
               const resJson = JSON.parse(res.text);
               resJson.should.have.property('name').equal('rebase');
-              resJson.should.have.property('id');
-              resJson.should.have.property('idProcess');
-              // // on vérifie que le idProcess est accessible
-              // const { idProcess } = resJson;
-              // chai.request(app)
-              //   .get(`/process/${idProcess}`)
-              //   .end((err2, res2) => {
-              //     should.not.exist(err2);
-              //     res2.should.have.status(200);
-              //     console.log(JSON.parse(res2.text))
-              //     const resJson2 = JSON.parse(res2.text);
-              //     resJson2.should.have.property('id').equal(idProcess);
-              //     resJson2.should.have.property('start_date');
-              //     resJson2.should.have.property('end_date');
-              //     resJson2.should.have.property('status');
-              //     resJson2.should.have.property('result');
-              //     done();
-              //   });
+              resJson.should.have.property('process').that.is.an('array');
+              resJson.process.forEach((item) => {
+                item.should.have.property('id');
+                item.should.have.property('idProcess');
+              });
               done();
             });
         }).timeout(9000);
@@ -317,40 +303,73 @@ describe('route/branch.js', () => {
               });
           }).timeout(9000);
         });
-        describe(`rebase ${branchName} into 'orig'`, () => {
+        describe(`New branch ${branchName2} with a patch`, () => {
+          it(`create branch ${branchName2}`, (done) => {
+            chai.request(app)
+              .post('/branch')
+              .query({
+                name: branchName2,
+                idCache,
+              })
+              .end((err, res) => {
+                should.not.exist(err);
+                res.should.have.status(200);
+                const resJson = JSON.parse(res.text);
+                resJson.should.have.property('id');
+                setIdBranch(cacheName, branchName2, resJson.id);
+                setIdBranch(branchName2, resJson.id);
+                resJson.should.have.property('name').equal(branchName2);
+                done();
+              });
+          });
+          it(`add a patch on ${branchName2}`, (done) => {
+            chai.request(app)
+              .post(`/${idBranch[branchName2]}/patch`)
+              .send({
+                type: 'FeatureCollection',
+                crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2154' } },
+                features: [
+                  {
+                    type: 'Feature',
+                    properties: {
+                      color: overviews.list_OPI[testOpi].color,
+                      opiName: testOpi,
+                      is_auto: false,
+                    },
+                    geometry: { type: 'Polygon', coordinates: [[[230749, 6759646], [230752, 6759646], [230752, 6759644], [230749, 6759644], [230749, 6759646]]] },
+                  }],
+              })
+              .end((err, res) => {
+                should.not.exist(err);
+                console.log(res.body.msg);
+                res.should.have.status(200);
+                const resJson = JSON.parse(res.text);
+                resJson.should.be.a('array');
+                done();
+              });
+          }).timeout(9000);
+        });
+        describe(`rebase ${branchName} et ${branchName2} into 'orig'`, () => {
           it('should succeed', (done) => {
             const rebaseName = 'rebase2';
             chai.request(app)
-              .post(`/${idBranch[branchName]}/rebase`)
+              .post('/branches/rebase')
               .query({
                 name: rebaseName,
-                idBase: idBranch.orig,
+                idBranch: [idBranch.orig, idBranch[branchName], idBranch[branchName2]],
               })
               .end((err, res) => {
                 should.not.exist(err);
                 res.should.have.status(200);
                 const resJson = JSON.parse(res.text);
                 resJson.should.have.property('name').equal(rebaseName);
-                resJson.should.have.property('id');
-                resJson.should.have.property('idProcess');
-                setIdProcessus(rebaseName, resJson.idProcess);
+                resJson.should.have.property('process').that.is.an('array');
+                resJson.process.forEach((item) => {
+                  item.should.have.property('id');
+                  item.should.have.property('idProcess');
+                });
+                setIdProcessus(rebaseName, resJson.process[0].idProcess);
                 done();
-                // // on vérifie que le idProcess est accessible
-                // const { idProcess } = resJson;
-                // chai.request(app)
-                //   .get(`/process/${idProcess}`)
-                //   .end((err2, res2) => {
-                //     should.not.exist(err2);
-                //     res2.should.have.status(200);
-                //     console.log(JSON.parse(res2.text))
-                //     const resJson2 = JSON.parse(res2.text);
-                //     resJson2.should.have.property('id').equal(idProcess);
-                //     resJson2.should.have.property('start_date');
-                //     resJson2.should.have.property('end_date');
-                //     resJson2.should.have.property('status');
-                //     resJson2.should.have.property('result');
-                //     done();
-                //   });
               });
           }).timeout(9000);
         });
@@ -358,35 +377,23 @@ describe('route/branch.js', () => {
           it('should succeed', (done) => {
             const rebaseName = 'rebase3';
             chai.request(app)
-              .post(`/${idBranch.orig}/rebase`)
+              .post('/branches/rebase')
               .query({
                 name: 'rebase3',
-                idBase: idBranch[branchName],
+                idBranch: [idBranch[branchName], idBranch.orig],
               })
               .end((err, res) => {
                 should.not.exist(err);
                 res.should.have.status(200);
                 const resJson = JSON.parse(res.text);
                 resJson.should.have.property('name').equal(rebaseName);
-                resJson.should.have.property('id');
-                resJson.should.have.property('idProcess');
-                setIdProcessus(rebaseName, resJson.idProcess);
+                resJson.should.have.property('process').that.is.an('array');
+                resJson.process.forEach((item) => {
+                  item.should.have.property('id');
+                  item.should.have.property('idProcess');
+                });
+                setIdProcessus(rebaseName, resJson.process[0].idProcess);
                 done();
-              //   // on vérifie que le idProcess est accessible
-              //   const { idProcess } = resJson;
-              //   chai.request(app)
-              //     .get(`/process/${idProcess}`)
-              //     .end((err2, res2) => {
-              //       should.not.exist(err2);
-              //       res2.should.have.status(200);
-              //       const resJson2 = JSON.parse(res2.text);
-              //       resJson2.should.have.property('id').equal(idProcess);
-              //       resJson2.should.have.property('start_date');
-              //       resJson2.should.have.property('end_date');
-              //       resJson2.should.have.property('status');
-              //       resJson2.should.have.property('result');
-              //       done();
-              //     });
               });
           }).timeout(9000);
         });
