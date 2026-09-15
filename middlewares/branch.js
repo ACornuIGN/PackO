@@ -2,6 +2,7 @@ const debug = require('debug')('branch');
 const fs = require('fs');
 const path = require('path');
 const { matchedData } = require('express-validator');
+const turf = require('@turf/turf');
 const db = require('../db/db');
 const pgClient = require('./pgClient');
 const patch = require('./patch');
@@ -173,7 +174,11 @@ async function initRebaseBranch(pgClientRequest, nameNewBranch, idBase, cache, o
     // ajouter les slabs correspondant au patch dans la table correspondante
     await db.insertSlabs(pgClientRequest, idNewPatch, slabs);
   }
-  return idNewBranch;
+  return [idNewBranch, patches];
+}
+
+function geometriesIntersect(feature1, feature2) {
+  return turf.booleanIntersects(feature1, feature2);
 }
 
 async function rebase(req, res, next) {
@@ -189,6 +194,7 @@ async function rebase(req, res, next) {
   // On récupère est on enléve la premier valeur du tableau d'ids des branches
   const idBase = idBranch.shift();
   let idNewBranch;
+  let newRebasePatches;
 
   // Vérification que les branches sont sur le même cache
   const cache = await db.getCache(req.client, idBase);
@@ -209,8 +215,9 @@ async function rebase(req, res, next) {
   // On commence par creer une copie de la branche
   // avec le bon nom et un nouvel id
   try {
-    idNewBranch = await initRebaseBranch(req.client, name, idBase,
+    [idNewBranch, newRebasePatches] = await initRebaseBranch(req.client, name, idBase,
       cache, req.overviews);
+    debug('newRebasePatches : ', newRebasePatches);
   } catch (error) {
     debug(error);
     req.error = {
@@ -248,6 +255,16 @@ async function rebase(req, res, next) {
       // Clonage du patches pour en modifier un
       const patchWithOneFeature = JSON.parse(JSON.stringify(patches));
       for (const feature of patches.features) {
+        // Vérification si la saisie intersect une autre saisie de la branche de rebase
+        for (const featureBase of newRebasePatches.features) {
+          const intersect = geometriesIntersect(feature, featureBase);
+          if (intersect) {
+            let ms = `feature id ${feature.properties.id} intersect `;
+            ms += `feature id ${featureBase.properties.id}`;
+            debug(ms);
+          }
+        }
+        // Application du patch
         patchWithOneFeature.features = [feature];
         await patch.applyPatch(
           req.client,
@@ -258,6 +275,8 @@ async function rebase(req, res, next) {
         );
       }
       debug('fin de applyPatches');
+      // Ajout patches appliqués aux patches de la branche
+      newRebasePatches.features = newRebasePatches.features.concat(patches.features);
 
       await db.finishProcess(req.client, 'succeed', idProcess, 'done');
     } catch (error) {
