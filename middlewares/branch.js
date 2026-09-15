@@ -2,11 +2,11 @@ const debug = require('debug')('branch');
 const fs = require('fs');
 const path = require('path');
 const { matchedData } = require('express-validator');
-const turf = require('@turf/turf');
 const db = require('../db/db');
 const pgClient = require('./pgClient');
 const patch = require('./patch');
 const cog = require('../cog_path');
+const gdalProcessing = require('../gdal_processing');
 
 async function getBranches(req, _res, next) {
   debug('>>GET branches');
@@ -177,10 +177,6 @@ async function initRebaseBranch(pgClientRequest, nameNewBranch, idBase, cache, o
   return [idNewBranch, patches];
 }
 
-function geometriesIntersect(feature1, feature2) {
-  return turf.booleanIntersects(feature1, feature2);
-}
-
 async function rebase(req, res, next) {
   debug('~~~rebase branch~~~');
   if (req.error) {
@@ -234,6 +230,7 @@ async function rebase(req, res, next) {
   let idBaseBrProcess;
   let idNewBrProcess = `${idNewBranch}`;
   const process = [];
+  const buffer = 10 * req.overviews.resolution;
   for (const idBr of idBranch) {
     // Comme cela peut-être long
     // il faut créer un processus
@@ -257,7 +254,8 @@ async function rebase(req, res, next) {
       for (const feature of patches.features) {
         // Vérification si la saisie intersect une autre saisie de la branche de rebase
         for (const featureBase of newRebasePatches.features) {
-          const intersect = geometriesIntersect(feature, featureBase);
+          const intersect = gdalProcessing.geometriesIntersect(feature,
+            featureBase, buffer, req.overviews.crs.code);
           if (intersect) {
             let ms = `feature id ${feature.properties.id} intersect `;
             ms += `feature id ${featureBase.properties.id}`;
