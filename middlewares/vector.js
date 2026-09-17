@@ -4,6 +4,25 @@ const { matchedData } = require('express-validator');
 
 const db = require('../db/db');
 
+function getStyle() {
+  // Création d'un style
+  const randomColor = Math.round(Math.random() * 0xffffff);
+  const style = {
+    fill: {
+      color: `#${randomColor.toString(16)}`,
+      opacity: 0.7,
+    },
+    stroke: {
+      color: `#${randomColor.toString(16)}`,
+    },
+    point: {
+      color: `#${randomColor.toString(16)}`,
+      radius: 5,
+    },
+  };
+  return style;
+}
+
 async function getVectors(req, _res, next) {
   debug('>>GET vectors');
   if (req.error) {
@@ -77,21 +96,7 @@ async function postVector(req, _res, next) {
   const { idBranch } = params;
 
   const crs = await db.getCrsFromIdBranch(req.client, idBranch);
-  // Création d'un style
-  const randomColor = Math.round(Math.random() * 0xffffff);
-  const style = {
-    fill: {
-      color: `#${randomColor.toString(16)}`,
-      opacity: 0.7,
-    },
-    stroke: {
-      color: `#${randomColor.toString(16)}`,
-    },
-    point: {
-      color: `#${randomColor.toString(16)}`,
-      radius: 5,
-    },
-  };
+  const style = getStyle();
 
   try {
     const NewVector = await db.insertLayer(req.client,
@@ -255,6 +260,7 @@ async function delRemark(req, _res, next) {
 }
 
 module.exports = {
+  getStyle,
   getVectors,
   getVector,
   postVector,

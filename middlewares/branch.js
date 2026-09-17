@@ -7,6 +7,7 @@ const pgClient = require('./pgClient');
 const patch = require('./patch');
 const cog = require('../cog_path');
 const gdalProcessing = require('../gdal_processing');
+const { getStyle } = require('./vector');
 
 async function getBranches(req, _res, next) {
   debug('>>GET branches');
@@ -228,7 +229,12 @@ async function rebase(req, res, next) {
   // on applique les patchs des autres Branches dans cette nouvelle branche
   debug(`Boucle sur les ids Banches ${idBranch}`);
   let idBaseBrProcess;
-  let idNewBrProcess = `${idNewBranch}`;
+  let idNewBrProcess = `${idNewBranch}_${idBase}`;
+  const intersectJson = {
+    type: 'FeatureCollection',
+    name: 'alert_intersection',
+    features: [],
+  };
   const process = [];
   const buffer = 10 * req.overviews.resolution;
   for (const idBr of idBranch) {
@@ -254,12 +260,24 @@ async function rebase(req, res, next) {
       for (const feature of patches.features) {
         // Vérification si la saisie intersect une autre saisie de la branche de rebase
         for (const featureBase of newRebasePatches.features) {
-          const intersect = gdalProcessing.geometriesIntersect(feature,
+          const intersection = gdalProcessing.geometriesIntersection(feature,
             featureBase, buffer, req.overviews.crs.code);
-          if (intersect) {
+          if (intersection && !intersection.isEmpty()) {
+            const centroid = intersection.centroid();
             let ms = `feature id ${feature.properties.id} intersect `;
             ms += `feature id ${featureBase.properties.id}`;
+            ms += `Le barycentre de l'intersection est ${centroid.x}, ${centroid.y}.`;
             debug(ms);
+            intersectJson.features.push({
+              type: 'Feature',
+              geometry: centroid.toObject(),
+              properties: {
+                idPatch: feature.properties.id,
+                idBranch: feature.properties.id_branch,
+                idPatchBase: featureBase.properties.id,
+                idBranchBase: featureBase.properties.id_branch,
+              },
+            });
           }
         }
         // Application du patch
@@ -282,8 +300,20 @@ async function rebase(req, res, next) {
       await db.finishProcess(req.client, 'failed', idProcess, 'done');
     }
   }
+  const result = { name, process };
+  if (intersectJson.features.length !== 0) {
+    result.infoInter = intersectJson;
+    const style = getStyle();
+    await db.insertLayer(
+      req.client,
+      idNewBranch,
+      intersectJson,
+      cache.crs,
+      style,
+    );
+  }
   // on retourne l'identifiant de la branche, son nom et l'identifiant et du processus
-  req.result = { json: { name, process }, code: 200 };
+  req.result = { json: result, code: 200 };
   pgClient.close(req, res, () => {});
   next();
 }
