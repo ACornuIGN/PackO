@@ -121,7 +121,7 @@ describe('route/vector.js', () => {
   });
 
   describe('POST /{idBranch}/vector', () => {
-    describe('body: {}', () => {
+    describe('name: null', () => {
       it('should return an error', (done) => {
         chai.request(app)
           .post(`/${idBranch[testBranchName]}/vector`)
@@ -130,6 +130,21 @@ describe('route/vector.js', () => {
             res.should.have.status(400);
             const resJson = JSON.parse(res.text);
             resJson.should.be.an('array').to.have.lengthOf(2);
+            resJson[0].should.have.property('status').equal("Le paramètre 'name' est requis.");
+            done();
+          });
+      });
+    });
+    describe('body: {}', () => {
+      it('should return an error', (done) => {
+        chai.request(app)
+          .post(`/${idBranch[testBranchName]}/vector`)
+          .query({ name: 'vector1' })
+          .end((err, res) => {
+            should.not.exist(err);
+            res.should.have.status(400);
+            const resJson = JSON.parse(res.text);
+            resJson.should.be.an('array').to.have.lengthOf(1);
             resJson[0].should.have.property('status').equal('Un body non vide est requis.');
             done();
           });
@@ -139,6 +154,7 @@ describe('route/vector.js', () => {
       it('should send the vector and return name and id of the vector added', (done) => {
         chai.request(app)
           .post(`/${idBranch[testBranchName]}/vector`)
+          .query({ name: vectorName })
           .send(vector)
           .end((err, res) => {
             should.not.exist(err);
@@ -155,12 +171,14 @@ describe('route/vector.js', () => {
       it('should return a error', (done) => {
         chai.request(app)
           .post(`/${idBranch[testBranchName]}/vector`)
+          .query({ name: vectorName })
           .send(vector)
           .end((err, res) => {
             should.not.exist(err);
-            res.should.have.status(406);
+            res.should.have.status(400);
             const resJson = JSON.parse(res.text);
-            resJson.should.have.property('msg').equal('A vector with this name already exists.');
+            resJson.should.be.an('array').to.have.lengthOf(1);
+            resJson[0].should.have.property('status').equal("Le paramètre 'name' n'est pas valide.");
             done();
           });
       });

@@ -373,7 +373,7 @@ async function getLayer(pgClient, idVector) {
   return results.rows[0].geojson;
 }
 
-async function insertLayer(pgClient, idBranch, geojson, crs, style) {
+async function insertLayer(pgClient, idBranch, name, geojson, crs, style) {
   debug(`    ~~insertLayer (idBranch: ${idBranch})`);
   let results;
   /// ////////////////////
@@ -382,7 +382,7 @@ async function insertLayer(pgClient, idBranch, geojson, crs, style) {
   const sqlInsertStyle = format('INSERT INTO styles (name, opacity, visibility, style_itowns) '
                               + 'VALUES (%L, %s, %L, %L) '
                               + 'returning id as id_style',
-  `${geojson.name}_${idBranch}`,
+  `${name}_${idBranch}`,
   1,
   true,
   style);
@@ -396,7 +396,7 @@ async function insertLayer(pgClient, idBranch, geojson, crs, style) {
   const sqlInsertLayer = format('INSERT INTO layers (name, crs, id_branch, id_style) '
     + 'VALUES (%L, %L, %s, %s) '
     + 'RETURNING id as id_layer',
-  geojson.name,
+  name,
   crs,
   idBranch,
   results.rows[0].id_style);

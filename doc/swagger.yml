@@ -501,8 +501,14 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: name
+          description: le nom de la couche vecteur
+          required: true
+          schema:
+            type: string
       requestBody:
-        description: couche vecteur annexe à ajouter (geojson avec une balise "name").
+        description: couche vecteur annexe à ajouter (GeoJSON).
         required: true
         content:
           application/json:
@@ -512,9 +518,6 @@ paths:
                   type:
                     type: string
                     value: FeatureCollection
-                  name:
-                    type: string
-                    example: nom_vecteur
                   features:
                     type: array
                     items:
