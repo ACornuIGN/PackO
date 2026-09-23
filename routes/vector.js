@@ -85,15 +85,18 @@ router.get('/:idBranch/vector',
 router.post('/:idBranch/vector', encapBody.bind({ keyName: 'json' }),
   pgClient.open,
   branch.getBranches.bind({ column: 'id' }),
+  vector.getVectors.bind({ column: 'name' }),
   [
     param('idBranch')
       .exists().withMessage(createErrMsg.missingParameter('idBranch'))
       .custom((value, { req }) => req.result.getBranches.includes(Number(value)))
       .withMessage(createErrMsg.invalidParameter('idBranch')),
+    query('name')
+      .exists().withMessage(createErrMsg.missingParameter('name'))
+      .custom((value, { req }) => !req.result.getVectors.includes(value))
+      .withMessage(createErrMsg.invalidParameter('name')),
     body('json')
       .exists().withMessage(createErrMsg.missingBody),
-    body('json.name')
-      .exists().withMessage(createErrMsg.missingParameter('name')),
     ...vectorToSave,
   ],
   validateParams,

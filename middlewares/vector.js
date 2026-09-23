@@ -74,7 +74,7 @@ async function postVector(req, _res, next) {
     return;
   }
   const params = matchedData(req);
-  const { idBranch } = params;
+  const { idBranch, name } = params;
 
   const crs = await db.getCrsFromIdBranch(req.client, idBranch);
   // Création d'un style
@@ -96,13 +96,14 @@ async function postVector(req, _res, next) {
   try {
     const NewVector = await db.insertLayer(req.client,
       idBranch,
+      name,
       params.json,
       crs.crs,
       style);
 
     req.result = {
       json: {
-        msg: `vector '${params.json.name}' (${NewVector.features.length} feature(s)) ajouté.`,
+        msg: `vector '${name}' (${NewVector.features.length} feature(s)) ajouté.`,
         id: NewVector.id,
         crs: crs.crs,
         style,

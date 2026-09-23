@@ -76,17 +76,14 @@ class API {
 
   saveVector(idBranch, name, geojson) {
     return new Promise((resolve, reject) => {
-      fetch(`${this.url}/${idBranch}/vector`,
+      fetch(`${this.url}/${idBranch}/vector?name=${name}`,
         {
           method: 'POST',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name,
-            ...geojson,
-          }),
+          body: JSON.stringify(geojson),
         }).then((res) => {
         res.json().then((json) => {
           if (res.status === 200) {
