@@ -7,6 +7,15 @@ const pgClient = require('./pgClient');
 const patch = require('./patch');
 const cog = require('../cog_path');
 
+function groupByIdBlock(patches) {
+  return patches.features.reduce((acc, feature) => {
+    const key = feature.properties.id_block;
+    if (acc[key] === undefined) acc[key] = [];
+    acc[key].push(feature);
+    return acc;
+  }, {});
+}
+
 async function getBranches(req, _res, next) {
   debug('>>GET branches');
   if (req.error) {
@@ -182,12 +191,7 @@ async function rebase(req, res, next) {
     });
     // on ajoute les patchs dans la BD sur cette nouvelle branche
     // Groupe feature par id_block
-    const patchByBlock = patches.features.reduce((acc, feature) => {
-      const key = feature.properties.id_block;
-      if (acc[key] === undefined) acc[key] = [];
-      acc[key].push(feature);
-      return acc;
-    }, {});
+    const patchByBlock = groupByIdBlock(patches);
     for (const features of Object.values(patchByBlock)) {
       // on insert ce patch dans les MTD de la branche
       debug(features);
@@ -233,12 +237,7 @@ async function rebase(req, res, next) {
   try {
     const patches = await db.getActivePatches(req.client, idBranch);
     // Groupe feature par id_block
-    const patchByBlock = patches.features.reduce((acc, feature) => {
-      const key = feature.properties.id_block;
-      if (acc[key] === undefined) acc[key] = [];
-      acc[key].push(feature);
-      return acc;
-    }, {});
+    const patchByBlock = groupByIdBlock(patches);
     debug('patches : ', patches);
 
     for (const features of Object.values(patchByBlock)) {
