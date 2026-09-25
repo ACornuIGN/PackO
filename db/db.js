@@ -149,7 +149,7 @@ async function getActivePatches(pgClient, idBranch, nbPatches) {
     + ' FROM ( '
     + '  SELECT '
     + '   p.*, blk.num AS num_block, '
-    + '   ARRAY_AGG(ARRAY[s.x, s.y, s.z]) AS slabs '
+    + "   ARRAY_AGG(json_build_object('x', s.x, 'y', s.y, 'z', s.z)) AS slabs "
     + '  FROM patches p '
     + '  JOIN blocks blk ON p.id_block = blk.id '
     + '  LEFT JOIN slabs s ON p.id = s.id_patch '

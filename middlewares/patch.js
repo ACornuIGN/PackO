@@ -846,10 +846,10 @@ async function clear(req, _res, next) {
     return;
   }
   const { features } = activePatches;
-  const slabsDico = {};
+  const slabsDico = new Set();
   features.forEach((feature) => {
     feature.properties.slabs.forEach((slab) => {
-      slabsDico[JSON.stringify(slab)] = { x: slab[0], y: slab[1], z: slab[2] };
+      slabsDico.add(JSON.stringify(slab));
     });
   });
   debug('', Object.keys(slabsDico).length, ' dalles impactées');
