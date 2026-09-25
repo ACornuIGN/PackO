@@ -20,8 +20,7 @@ async function writeGeojson(idStorage, cachePath, geojson, feature) {
   geojsonOz.name = `${idBranch}_${idPatch}`;
   geojsonOz.features = [JSON.parse(JSON.stringify(feature))];
 
-  const prop = feature.properties;
-  if (prop.is_auto) {
+  if (geojsonOz.features[0].properties.is_auto) {
     geojsonOz.features[0].geometry.type = 'MultiLineString';
   }
   geojsonOz.features[0].geometry.coordinates = [geojsonOz.features[0].geometry.coordinates];
