@@ -15,19 +15,19 @@ async function writeGeojson(idStorage, cachePath, geojson, feature) {
   // write patch geojson
   const filePath = `${dir}/patch_idBr${idBranch}_idP${idPatch}.geojson`;
 
-  const geojsonAna = JSON.parse(JSON.stringify(geojson));
+  const geojsonOz = JSON.parse(JSON.stringify(geojson));
 
-  geojsonAna.name = `${idBranch}_${idPatch}`;
-  geojsonAna.features = [JSON.parse(JSON.stringify(feature))];
+  geojsonOz.name = `${idBranch}_${idPatch}`;
+  geojsonOz.features = [JSON.parse(JSON.stringify(feature))];
 
   const prop = feature.properties;
   if (prop.is_auto) {
-    geojsonAna.features[0].geometry.type = 'MultiLineString';
+    geojsonOz.features[0].geometry.type = 'MultiLineString';
   }
-  geojsonAna.features[0].geometry.coordinates = [geojsonAna.features[0].geometry.coordinates];
+  geojsonOz.features[0].geometry.coordinates = [geojsonOz.features[0].geometry.coordinates];
 
   try {
-    fs.writeFileSync(filePath, JSON.stringify(geojsonAna, null, 2), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(geojsonOz, null, 2), 'utf8');
     debug(`  File '${filePath}' written`);
   } catch (error) {
     debug(error);
