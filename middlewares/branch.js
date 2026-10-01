@@ -7,9 +7,11 @@ const pgClient = require('./pgClient');
 const patch = require('./patch');
 const cog = require('../cog_path');
 const gdalProcessing = require('../gdal_processing');
+const { getStyle } = require('./vector');
 
 // Nombre de pixels utilisé pour le buffer d'intersection du merge
 const NBPX = 5;
+const NOM_VECT_INTER_MERGE = 'intersection_merge';
 
 async function getBranches(req, _res, next) {
   debug('>>GET branches');
@@ -180,10 +182,6 @@ async function initMergeBranch(pgClientRequest, nameNewBranch, idBase, cache, ov
   return [idNewBranch, patches];
 }
 
-function geometriesIntersect(feature1, feature2) {
-  return turf.booleanIntersects(feature1, feature2);
-}
-
 async function merge(req, res, next) {
   debug('~~~merge branch~~~');
   if (req.error) {
@@ -243,6 +241,11 @@ async function merge(req, res, next) {
   // on applique les patchs des autres Branches dans cette nouvelle branche
   debug(`Boucle sur les ids Banches ${idBranch}`);
   const buffer = NBPX * req.overviews.resolution;
+  const intersectMerge = {
+    type: 'FeatureCollection',
+    features: [],
+  };
+  const nbBranch = idBranch.length;
   try {
     for (const [i, idBr] of idBranch.entries()) {
       // On fait un commit pour la première partie du merge et on ouvre une transaction
@@ -266,6 +269,16 @@ async function merge(req, res, next) {
             ms += `feature id ${featureBase.properties.id}`;
             ms += `Le barycentre de l'intersection est ${centroid.x}, ${centroid.y}.`;
             debug(ms);
+            intersectMerge.features.push({
+              type: 'Feature',
+              geometry: centroid.toObject(),
+              properties: {
+                idPatch: feature.properties.id,
+                idBranch: feature.properties.id_branch,
+                idPatchBase: featureBase.properties.id,
+                idBranchBase: featureBase.properties.id_branch,
+              },
+            });
           }
         }
         // Application du patch
@@ -287,6 +300,17 @@ async function merge(req, res, next) {
   } catch (error) {
     debug(error);
     await db.finishProcess(req.client, 'failed', idProcess, 'done');
+  }
+  if (intersectMerge.features.length !== 0) {
+    const style = getStyle();
+    await db.insertLayer(
+      req.client,
+      idNewBranch,
+      NOM_VECT_INTER_MERGE,
+      intersectMerge,
+      cache.crs,
+      style,
+    );
   }
   pgClient.close(req, res, () => {});
 }
