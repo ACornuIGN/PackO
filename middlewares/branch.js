@@ -222,13 +222,13 @@ async function merge(req, res, next) {
     next();
     return;
   }
-  
+
   // Comme cela peut-être long
   // il faut créer un processus
   const idProcess = await db.createProcess(req.client,
     `base: ${idBase} + branch: ${idBranch} -> ${idNewBranch} (${name})`);
   // on retourne l'identifiant de la branche, son nom et l'identifiant et du processus
-  req.result = { json: {idNewBranch, idProcess}, code: 200 };
+  req.result = { json: { idNewBranch, idProcess }, code: 200 };
   next();
   // on applique les patchs des autres Branches dans cette nouvelle branche
   debug(`Boucle sur les ids Banches ${idBranch}`);
@@ -256,15 +256,14 @@ async function merge(req, res, next) {
       }
       debug('fin de applyPatches');
       // Ajout patches appliqués aux patches de la branche
-      await db.updateProcess(req.client, idProcess, `${(i+1)/nbBranch*100}%`)
+      await db.updateProcess(req.client, idProcess, `${((i + 1) / nbBranch) * 100}%`);
     }
     await db.finishProcess(req.client, 'succeed', idProcess, 'done');
   } catch (error) {
-      debug(error);
+    debug(error);
     await db.finishProcess(req.client, 'failed', idProcess, 'done');
   }
   pgClient.close(req, res, () => {});
-  return;
 }
 
 async function getCachePath(req, _res, next) {
