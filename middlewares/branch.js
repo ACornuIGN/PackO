@@ -261,8 +261,8 @@ async function merge(req, res, next) {
       for (const feature of patches.features) {
         // Vérification si la saisie intersect une autre saisie de la branche de merge
         for (const featureBase of newMergePatches.features) {
-          const intersection = gdalProcessing.geometriesIntersection(feature,
-            featureBase, buffer, req.overviews.crs.code);
+          const intersection = gdalProcessing.geometriesIntersection(feature.geometry,
+            featureBase.geometry, buffer, req.overviews.crs.code);
           if (intersection && !intersection.isEmpty()) {
             const centroid = intersection.centroid();
             let ms = `feature id ${feature.properties.id} intersect `;

@@ -336,10 +336,10 @@ function processPolygonPatchAsync(patch, blocSize) {
   });
 }
 
-function geometriesIntersection(feature1, feature2, buffer, epsg) {
+function geometriesIntersection(geometry1, geometry2, buffer, epsg) {
   // Création d'une géometrie GDAL
-  const geom1 = gdal.Geometry.fromGeoJson(feature1.geometry);
-  const geom2 = gdal.Geometry.fromGeoJson(feature2.geometry);
+  const geom1 = gdal.Geometry.fromGeoJson(geometry1);
+  const geom2 = gdal.Geometry.fromGeoJson(geometry2);
   // Ajout de la projection dans les géometries
   geom1.srs = gdal.SpatialReference.fromEPSG(epsg);
   geom2.srs = gdal.SpatialReference.fromEPSG(epsg);
