@@ -170,11 +170,7 @@ class API {
           body: dataStr,
         })
         .then((res) => {
-          if (res.status === 200) {
-            res.json().then((json) => resolve(json));
-          } else {
-            res.json().then((json) => reject(json));
-          }
+          res.json().then((json) => (res.status === 200 ? resolve(json) : reject(json)));
         });
     });
   }
