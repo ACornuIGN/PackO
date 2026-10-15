@@ -156,23 +156,17 @@ class Editing {
         this.viewer.refresh(['Ortho', 'Graph', 'Contour', 'Patches'], cacheBusting);
         this.viewer.message = '';
         // Filtrage des patchs avec du No Data sans doublon
-        const stockIdPatch = new Set();
-        const patchNoData = res.filter((patch) => {
-          if (patch.withNoData !== true || stockIdPatch.has(patch.id)) {
-            return false;
-          }
-          stockIdPatch.add(patch.id);
-          return true;
-        });
-        // Création du message
-        let msPxNoData = 'No Data présent dans le patch: \n';
-        patchNoData.forEach((patch) => {
-          msPxNoData += `id patch: ${patch.idPatch}\n`;
-        });
-        if (patchNoData.length > 0) {
+        const idPatchNoData = [...new Set(
+          res.filter((patch) => patch.withNoData === true)
+            .map((patch) => patch.idPatch),
+        )];
+        // Création du message d'erreur
+        if (idPatchNoData.length > 0) {
+          const error = new Error(`No Data présent dans le patch: \n id patch : ${idPatchNoData.join(', ')}.`);
+          error.name = 'WarningNoData';
           this.viewer.view.dispatchEvent({
             type: 'error',
-            error: { msg: msPxNoData },
+            error,
           });
         }
       })
