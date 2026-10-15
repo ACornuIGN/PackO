@@ -161,6 +161,7 @@ class Editing {
         this.viewer.message = 'Erreur post patch';
         this.viewer.view.dispatchEvent({
           type: 'error',
+          sender: 'api',
           error,
         });
       })

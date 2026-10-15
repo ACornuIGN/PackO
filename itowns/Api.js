@@ -98,7 +98,7 @@ class API {
             resolve(json.id);
           } else {
             console.log(`-> Database Error: Layer '${name}' NOT saved`);
-            console.log(json.msg);
+            console.log(json[0].error.msg);
             reject();
           }
         });

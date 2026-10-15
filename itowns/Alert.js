@@ -151,10 +151,6 @@ class Alert {
           this.viewer.message = 'PB with updating the database';
           const err = new Error('Feature.status NOT modified');
           err.name = 'Database Error';
-          // this.viewer.view.dispatchEvent({
-          //   type: 'error',
-          //   error: err,
-          // });
           eventObj = {
             type: 'error',
             error: err,
