@@ -428,6 +428,19 @@ class Viewer {
     console.log(' ~~addDnDFiles');
     eventDnD.preventDefault();
 
+    const geojson = {
+      type: "Point",
+      coordinates: [2.35, 48.86],
+      crs: {
+        type: "name",
+        properties: {
+          name: "urn:ogc:def:crs:OGC:1.3:CRS84",
+        },
+      },
+    };
+
+    console.log(GJV.valid(geojson));
+
     // TYPE
     const _TEXT = 1;
     const _JSON = 2;
