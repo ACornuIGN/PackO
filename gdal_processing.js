@@ -4,7 +4,7 @@ const gdal = require('gdal-async');
 const path = require('path');
 const uuid = require('uuid');
 
-const NODATA = 0;
+const NODATA = { RGB: [0, 0, 0], IR: 0 };
 const defaultImage = {};
 
 if (process.env.PROJ_LIB !== undefined) {
@@ -214,7 +214,7 @@ function processPolygonPatchAsync(patch, blocSize) {
     const { urlOpiRefRgb, urlOpiRefIr } = patch;
 
     debug('chargement...');
-    return Promise.all([
+    Promise.all([
       gdal.openAsync(urlGraph).then((ds) => getBands(ds)),
       patch.withRgb ? gdal.openAsync(urlOpiRefRgb).then((ds) => getBands(ds)) : null,
       patch.withIr ? gdal.openAsync(urlOpiRefIr).then((ds) => getBand(ds)) : null,
@@ -229,8 +229,7 @@ function processPolygonPatchAsync(patch, blocSize) {
       const orthoRgb = images[3];
       const orthoIr = images[4];
 
-      let pxNoData = 0;
-      let pxNoDataIr = 0;
+      const pxNoData = { RGB: 0, IR: 0 };
       graph.bands[0].forEach((_element, index) => {
         /* eslint-disable no-param-reassign */
         if (mask.data[4 * index] > 0) {
@@ -241,8 +240,8 @@ function processPolygonPatchAsync(patch, blocSize) {
             const colorOpi = [opiRefRgb.bands[0][index],
               opiRefRgb.bands[1][index],
               opiRefRgb.bands[2][index]];
-            if (colorOpi.every((val) => val === NODATA)) {
-              pxNoData += 1;
+            if (colorOpi.every((val, idx) => val === NODATA.RGB[idx])) {
+              pxNoData.RGB += 1;
             }
             [orthoRgb.bands[0][index],
               orthoRgb.bands[1][index],
@@ -250,8 +249,8 @@ function processPolygonPatchAsync(patch, blocSize) {
           }
           if (orthoIr) {
             const colorIr = opiRefIr.bands[0][index];
-            if (colorIr === NODATA) {
-              pxNoDataIr += 1;
+            if (colorIr === NODATA.IR) {
+              pxNoData.IR += 1;
             }
             orthoIr.bands[0][index] = opiRefIr.bands[0][index];
           }
@@ -340,7 +339,8 @@ function processPolygonPatchAsync(patch, blocSize) {
         createdDs.forEach((ds) => {
           if (ds) ds.close();
         });
-        res({ pxNoData, pxNoDataIr });
+        const patchTreated = { noData: pxNoData, ...patch };
+        res(patchTreated);
       });
     });
   });
