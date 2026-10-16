@@ -8,11 +8,7 @@ const patch = require('./patch');
 const cog = require('../cog_path');
 
 function getIdsBlocks(patches) {
-  return patches.features.reduce((acc, feature) => {
-    const idBlock = feature.properties.id_block;
-    if (!acc.include(idBlock)) acc.push(idBlock);
-    return acc;
-  }, []);
+  return [...new Set(patches.features.map((feature) => feature.properties.idBlock))];
 }
 
 async function getBranches(req, _res, next) {
