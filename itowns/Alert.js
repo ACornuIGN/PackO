@@ -129,14 +129,6 @@ class Alert {
           this.comment = featureSelectedGeom.properties.comment;
           this.viewer.view.getLayerById(this.layerName)
             .idSelected = featureSelectedGeom.properties.id;
-          // this.viewer.view.dispatchEvent({
-          //   type: 'alert-selected',
-          //   option,
-          //   // layerName: this.layerName,
-          //   // id: featureSelectedGeom.properties.id,
-          //   featureCenter: featureSelectedGeom.extent.clone()
-          //     .applyMatrix4(this.featureCollection.matrixWorld).center(),
-          // });
           eventObj = {
             type: 'alert-selected',
             option,
