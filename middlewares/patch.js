@@ -347,15 +347,19 @@ function renameSlab(dirCache, patch, idBranch, newBlockNum, newPatchNum) {
     'opi',
     patch.cogPath.dirPath,
     `${idBranch}_${patch.cogPath.filename}_history.packo`);
-  // Structure fichier json history
-  // les clés sont les numéros de block/multipatch appliqué sur le slab
-  // la valeur des clés est un array contant les numéros des patches dans le block
-  // ex: {1: [2, 3, 4], 5: [8], 9: [15, 16]}
+  // Structure du fichier history.json (1 par slab)
+  // avec pour clés, les numéros de bloc (ou multipatch) appliqué
+  // et pour valeur un array contant les numéros des patches du bloc
+  // ex: {
+  // 1: [2, 3, 4],
+  // 5: [8],
+  // 9: [15, 16],
+  // }
   const [history, prevBlockNum] = fs.existsSync(urlHistory)
     ? readHistory(urlHistory)
-    : [{}, null];
+    : [{}, 'orig'];
 
-  if (prevBlockNum !== null) {
+  if (prevBlockNum !== 'orig') {
     let blockNum = newBlockNum;
     if (prevBlockNum !== newBlockNum) {
       history[`${newBlockNum}`] = [];
@@ -364,24 +368,21 @@ function renameSlab(dirCache, patch, idBranch, newBlockNum, newPatchNum) {
 
     const prevPatchNum = history[`${blockNum}`][history[`${blockNum}`].length - 1];
 
-    // on ne fait un rename que si prevPatchNum n'est pas 'orig'
-    if (prevPatchNum !== 'orig') {
-      const urlGraphPrev = path.join(dirCache, 'graph', patch.cogPath.dirPath,
+    const urlGraphPrev = path.join(dirCache, 'graph', patch.cogPath.dirPath,
+      `${idBranch}_${patch.cogPath.filename}_${blockNum}-${prevPatchNum}.tif`);
+    rename(patch.urlGraph, urlGraphPrev);
+
+    if (patch.withRgb) {
+      const urlOrthoRbgPrev = path.join(dirCache, 'ortho', patch.cogPath.dirPath,
         `${idBranch}_${patch.cogPath.filename}_${blockNum}-${prevPatchNum}.tif`);
-      rename(patch.urlGraph, urlGraphPrev);
+      debug('rename ortho ', patch.urlOrthoRgb, ' en ', urlOrthoRbgPrev);
+      rename(patch.urlOrthoRgb, urlOrthoRbgPrev);
+    }
 
-      if (patch.withRgb) {
-        const urlOrthoRbgPrev = path.join(dirCache, 'ortho', patch.cogPath.dirPath,
-          `${idBranch}_${patch.cogPath.filename}_${blockNum}-${prevPatchNum}.tif`);
-        debug('rename ortho ', patch.urlOrthoRgb, ' en ', urlOrthoRbgPrev);
-        rename(patch.urlOrthoRgb, urlOrthoRbgPrev);
-      }
-
-      if (patch.withIr) {
-        const urlOrthoIrPrev = path.join(dirCache, 'ortho', patch.cogPath.dirPath,
-          `${idBranch}_${patch.cogPath.filename}_${blockNum}-${prevPatchNum}i.tif`);
-        rename(patch.urlOrthoIr, urlOrthoIrPrev);
-      }
+    if (patch.withIr) {
+      const urlOrthoIrPrev = path.join(dirCache, 'ortho', patch.cogPath.dirPath,
+        `${idBranch}_${patch.cogPath.filename}_${blockNum}-${prevPatchNum}i.tif`);
+      rename(patch.urlOrthoIr, urlOrthoIrPrev);
     }
     history[`${newBlockNum}`].push(newPatchNum);
     debug(' historique :', history);
@@ -857,7 +858,7 @@ async function clear(req, _res, next) {
   const slabsSet = new Set();
   features.forEach((feature) => {
     feature.properties.slabs.forEach((slab) => {
-      slabsSet.add(JSON.stringify(slab));
+      slabsSet.add(JSON.stringify({ x: slab.x, y: slab.y, z: slab.z }));
     });
   });
   debug('', slabsSet.size, ' dalles impactées');
