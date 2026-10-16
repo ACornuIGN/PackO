@@ -97,9 +97,11 @@ class API {
             console.log(`-> Layer '${name}' succesfully saved`);
             resolve(json.id);
           } else {
-            console.log(`-> Database Error: Layer '${name}' NOT saved`);
+            const err = new Error(`Layer '${name}' NOT saved`);
+            err.name = 'Database Error';
+            console.log(err);
             console.log(json[0].error.msg);
-            reject();
+            reject(err);
           }
         });
       });

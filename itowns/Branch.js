@@ -191,10 +191,8 @@ class Branch {
           this.setLayers(this.vectorList);
           resolve();
         })
-        .catch(() => {
+        .catch((err) => {
           this.viewer.message = 'PB with updating the database';
-          const err = new Error(`Layer '${name}' NOT saved`);
-          err.name = 'Database Error';
           reject(err);
         });
     });
