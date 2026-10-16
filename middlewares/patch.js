@@ -449,8 +449,9 @@ async function processSemiAutoPatch(pgClient, slabs, feature, overviews, infoRgb
   const insertPatchPromise = db.insertSlabs(pgClient, idPatch, slabs);
   const isAuto = true;
   // On écrit la saisie dans un fichier json pour le donner à OzCppExe
-  const geojsonPath = await gjson.paramGeoJsonOz(idBranch, idPatch, dirCache,
-    paramGeojson, feature);
+  const [geojsonPath, geojsonOz] = gjson.paramGeoJsonOz(idBranch, idPatch, dirCache,
+    paramGeojson, feature.properties, feature.geometry.coordinates);
+  await gjson.writeGeojson(geojsonPath, geojsonOz);
   debug('~create patch');
   const promisesCheckFile = slabs.map((slab) => createPatch(slab,
     {
