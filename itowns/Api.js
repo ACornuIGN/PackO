@@ -100,7 +100,7 @@ class API {
             const err = new Error(`Layer '${name}' NOT saved`);
             err.name = 'Database Error';
             console.log(err);
-            console.log(json[0].error.msg);
+            console.log(json);
             reject(err);
           }
         });
