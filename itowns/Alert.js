@@ -137,15 +137,13 @@ class Alert {
             layersToRefresh,
           };
         })
-        .catch(() => {
+        .catch((error) => {
           this.nbChecked -= 1;
           this.progress = `${this.nbChecked}/${this.nbTotal} (${this.nbValidated} validés)`;
           this.viewer.message = 'PB with updating the database';
-          const err = new Error('Feature.status NOT modified');
-          err.name = 'Database Error';
           eventObj = {
             type: 'error',
-            error: err,
+            error,
           };
         })
         .finally(() => {
@@ -186,13 +184,11 @@ class Alert {
 
           this.viewer.refresh([this.layerName]);
         })
-        .catch(() => {
+        .catch((error) => {
           this.viewer.message = 'PB with updating the database';
-          const err = new Error('Feature.status NOT modified');
-          err.name = 'Database Error';
           this.viewer.view.dispatchEvent({
             type: 'error',
-            error: err,
+            error,
           });
         });
     }
@@ -216,13 +212,11 @@ class Alert {
 
         this.viewer.refresh([this.layerName]);
       })
-      .catch(() => {
+      .catch((error) => {
         this.viewer.message = 'PB with updating the database';
-        const err = new Error('Feature.status NOT modified');
-        err.name = 'Database Error';
         this.viewer.view.dispatchEvent({
           type: 'error',
-          error: err,
+          error,
         });
       });
   }

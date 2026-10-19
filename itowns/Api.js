@@ -67,8 +67,10 @@ class API {
           console.log(`-> Database Error: Vector '${name}' (id: ${id}) NOT deleted`);
           res.text().then((msg) => {
             console.log(msg);
-            reject();
           });
+          const err = new Error(`Vector '${name}' (id: ${id}) NOT deleted`);
+          err.name = 'Database Error';
+          reject(err);
         }
       });
     });

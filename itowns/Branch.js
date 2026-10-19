@@ -206,11 +206,9 @@ class Branch {
           this.setLayers(this.vectorList);
           resolve();
         })
-        .catch(() => {
+        .catch((error) => {
           this.viewer.message = 'PB with updating the database';
-          const err = new Error(`Vector '${name}' (id: ${id}) NOT deleted`);
-          err.name = 'Database Error';
-          reject(err);
+          reject(error);
         });
     });
   }
