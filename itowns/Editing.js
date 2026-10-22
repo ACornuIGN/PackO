@@ -162,7 +162,7 @@ class Editing {
         )];
         // Création du message d'erreur
         if (idPatchNoData.length > 0) {
-          const error = new Error(`No Data présent dans le patch: \n id patch : ${idPatchNoData.join(', ')}.`);
+          const error = new Error(`NODATA dans saisie(s): ${idPatchNoData.join(', ')}.`);
           error.name = 'WarningNoData';
           this.viewer.view.dispatchEvent({
             type: 'error',

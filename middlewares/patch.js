@@ -416,7 +416,7 @@ async function processPolygonPatch(pgClient, slabs, feature, overviews, infoRgbI
           overviews.tileSize.width);
         let withNoData = false;
         if (noData.RGB > 0 || noData.IR > 0) {
-          debug(`Px No Data in RVB ${noData.RGB}, in Ir ${noData.IR}`);
+          debug(`${patchInserted.id_patch}: NODATA px in RGB ${noData.RGB}, in Ir ${noData.IR}`);
           withNoData = true;
         }
         // Renomme les données de sortie
