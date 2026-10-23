@@ -322,16 +322,16 @@ async function merge(req, res, next) {
           // TODO: récupération de la gémetrie polygone des features données
           // comment faire pour les semi-auto?
           // à partir de la saisie on prend le min et max
-          feature = getGeometryFeature(feature);
+          // feature = getGeometryFeature(feature);
           const buffer1 = getBufferToIntersect(feature, req.overviews.resolution);
-          featureBase = getGeometryFeature(featureBase);
+          // featureBase = getGeometryFeature(featureBase);
           const buffer2 = getBufferToIntersect(featureBase, req.overviews.resolution);
           debug(buffer1, buffer2);
           const intersection = gdalProcessing.geometriesIntersection(feature.geomPolygon, buffer1,
             featureBase.geomPolygon, buffer2, req.overviews.crs.code);
           if (intersection && !intersection.isEmpty()) {
-            debug('geom1', geom1.coordinates[0]);
-            debug('geom2', geom2.coordinates[0]);
+            // debug('geom1', geom1.coordinates[0]);
+            // debug('geom2', geom2.coordinates[0]);
             const centroid = intersection.centroid();
             let ms = `feature id ${feature.properties.id} intersect `;
             ms += `feature id ${featureBase.properties.id}. `;
