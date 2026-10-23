@@ -9,7 +9,8 @@ const cog = require('../cog_path');
 const gdalProcessing = require('../gdal_processing');
 
 // Nombre de pixels utilisé pour le buffer d'intersection du merge
-const NBPX = 5;
+const NBPXMANUEL = 5;
+const NBPXAUTO = 30;
 const NOM_VECT_INTER_MERGE = 'intersection_merge';
 
 async function getBranches(req, _res, next) {
@@ -181,7 +182,7 @@ async function initMergeBranch(pgClientRequest, nameNewBranch, idBase, cache, ov
   return [idNewBranch, patches];
 }
 
-function getGeometryFeature(feature, overviews) {
+function getGeometryFeature(feature) {
   // verif si déjà passé
   if (feature.geomPolygon) {
     debug(`feature n°${feature.properties.id} à un geomPolygon`);
@@ -194,54 +195,50 @@ function getGeometryFeature(feature, overviews) {
     return { ...feature, geomPolygon };
   }
   // récupération de la position des slabs min et max
-  let slabXMin;
-  let slabYMin;
-  let slabXMax;
-  let slabYMax;
+  let patchXMin;
+  let patchYMin;
+  let patchXMax;
+  let patchYMax;
   for (const coor of feature.geometry.coordinates) {
-    if (slabXMin === undefined || slabXMin > coor[0]) {
-      [slabXMin] = coor;
+    if (patchXMin === undefined || patchXMin > coor[0]) {
+      [patchXMin] = coor;
     }
-    if (slabYMin === undefined || slabYMin > coor[1]) {
-      [, slabYMin] = coor;
+    if (patchYMin === undefined || patchYMin > coor[1]) {
+      [, patchYMin] = coor;
     }
-    if (slabXMax === undefined || slabXMax < coor[0]) {
-      [slabXMax] = coor;
+    if (patchXMax === undefined || patchXMax < coor[0]) {
+      [patchXMax] = coor;
     }
-    if (slabYMax === undefined || slabYMax < coor[1]) {
-      [, slabYMax] = coor;
+    if (patchYMax === undefined || patchYMax < coor[1]) {
+      [, patchYMax] = coor;
     }
   }
-
-  // Calcule des coordonnées du polygone englobant
-  const xOrigin = overviews.crs.boundingBox.xmin;
-  const yOrigin = overviews.crs.boundingBox.ymax;
-  const slabWidth = overviews.tileSize.width * overviews.slabSize.width;
-  const slabHeight = overviews.tileSize.height * overviews.slabSize.height;
-  const resolution = overviews.resolution * 2 ** (overviews.level.max
-    - overviews.dataSet.level.max);
-  debug(slabXMin, slabYMin, slabXMax, slabYMax, xOrigin,
-    yOrigin, slabWidth, slabHeight, resolution);
-  const xMin = xOrigin + slabWidth * slabXMin * resolution;
-  const yMin = yOrigin - slabHeight * slabYMin * resolution;
-  const xMax = xOrigin + slabWidth * (slabXMax + 1) * resolution;
-  const yMax = yOrigin - slabHeight * (slabYMax + 1) * resolution;
 
   // création de la gemetrie
   const geomPolygon = {
     type: 'Polygon',
     coordinates: [[
-      [xMin, yMin],
-      [xMin, yMax],
-      [xMax, yMax],
-      [xMax, yMin],
-      [xMin, yMin],
-    ]],
-  };
+      [patchXMin, patchYMax],
+      [patchXMin, patchYMin],
+      [patchXMax, patchYMin],
+      [patchXMax, patchYMax],
+      [patchXMin, patchYMax],
+    ]]
+  }
   debug(`feature n°${feature.properties.id} création d'une geometrie Polygon`);
   debug(feature.geomPolygon);
-  debug(xMin, yMin, xMax, yMax);
-  return { ...feature, geomPolygon };
+  debug(patchXMin, patchYMin, patchXMax, patchYMax);
+  return feature.geomPolygon;
+}
+
+function getBufferToIntersect(feature, resolution) {
+  debug(feature.geometry.type);
+  if (feature.properties.is_auto) {
+    debug(NBPXAUTO);
+    return NBPXAUTO * resolution;
+  }
+  debug(NBPXMANUEL);
+  return NBPXMANUEL * resolution;
 }
 
 async function merge(req, res, next) {
@@ -302,7 +299,6 @@ async function merge(req, res, next) {
   next();
   // on applique les patchs des autres Branches dans cette nouvelle branche
   debug(`Boucle sur les ids Banches ${idBranch}`);
-  const buffer = NBPX * req.overviews.resolution;
   const intersectMerge = {
     type: 'FeatureCollection',
     features: [],
@@ -325,16 +321,20 @@ async function merge(req, res, next) {
         for (let featureBase of newMergePatches.features) {
           // TODO: récupération de la gémetrie polygone des features données
           // comment faire pour les semi-auto?
-          // à partir des slabs on prend leurs coordonnées max et min pour faire un polygone
-          // il faudrait stocker ce résultat pour ne pas à avoir à le recalculer à chaque fois
-          feature = getGeometryFeature(feature, req.overviews);
-          featureBase = getGeometryFeature(featureBase, req.overviews);
-          const intersection = gdalProcessing.geometriesIntersection(feature.geomPolygon,
-            featureBase.geomPolygon, buffer, req.overviews.crs.code);
+          // à partir de la saisie on prend le min et max
+          feature = getGeometryFeature(feature);
+          const buffer1 = getBufferToIntersect(feature, req.overviews.resolution);
+          featureBase = getGeometryFeature(featureBase);
+          const buffer2 = getBufferToIntersect(featureBase, req.overviews.resolution);
+          debug(buffer1, buffer2);
+          const intersection = gdalProcessing.geometriesIntersection(feature.geomPolygon, buffer1,
+            featureBase.geomPolygon, buffer2, req.overviews.crs.code);
           if (intersection && !intersection.isEmpty()) {
+            debug('geom1', geom1.coordinates[0]);
+            debug('geom2', geom2.coordinates[0]);
             const centroid = intersection.centroid();
             let ms = `feature id ${feature.properties.id} intersect `;
-            ms += `feature id ${featureBase.properties.id}`;
+            ms += `feature id ${featureBase.properties.id}. `;
             ms += `Le barycentre de l'intersection est ${centroid.x}, ${centroid.y}.`;
             debug(ms);
             intersectMerge.features.push({
